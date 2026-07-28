@@ -21,11 +21,10 @@ export default function DashboardPage() {
   const inTriagem = displayTasks.filter(t => t.status === "Triagem").length;
   const inProgress = displayTasks.filter(t => t.status !== "Aprovado").length;
   
-  const delayedTasksList = displayTasks.filter(t => 
+  const delayed = displayTasks.filter(t => 
     t.status !== "Aprovado" && t.dueDate &&
     isPast(parseISO(t.dueDate)) && !isToday(parseISO(t.dueDate))
-  );
-  const delayed = delayedTasksList.length;
+  ).length;
 
   const dueToday = displayTasks.filter(t => 
     t.status !== "Aprovado" && t.dueDate &&
@@ -33,6 +32,7 @@ export default function DashboardPage() {
   ).length;
 
   // Chart data for categories
+
   const categoriesCount = displayTasks.reduce((acc, task) => {
     acc[task.category] = (acc[task.category] || 0) + 1;
     return acc;
@@ -44,38 +44,50 @@ export default function DashboardPage() {
   }));
 
   // SLA Calculations
-  const approvedTasks = displayTasks.filter(t => t.status === "Aprovado");
+  const completedTasks = displayTasks.filter(t => t.status === "Aprovado" && t.completedAt);
+  
   let avgDeliveryTime = 0;
-  let validDeliveryTasks = 0;
-  approvedTasks.forEach(t => {
-    if (t.createdAt && t.completedAt) {
-      const diffTime = Math.abs(new Date(t.completedAt).getTime() - new Date(t.createdAt).getTime());
+  if (completedTasks.length > 0) {
+    const totalDays = completedTasks.reduce((acc, task) => {
+      const start = parseISO(task.createdAt);
+      const end = parseISO(task.completedAt!);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
-      avgDeliveryTime += diffDays;
-      validDeliveryTasks++;
+      return acc + diffDays;
+    }, 0);
+    avgDeliveryTime = totalDays / completedTasks.length;
+  }
+
+  let slaPercentage = 0;
+  const tasksWithDueDateAndCompleted = completedTasks.filter(t => t.dueDate);
+  if (tasksWithDueDateAndCompleted.length > 0) {
+    const onTimeCount = tasksWithDueDateAndCompleted.filter(t => {
+       const due = parseISO(t.dueDate);
+       const completed = parseISO(t.completedAt!);
+       // Consider end of day for due date
+       due.setHours(23, 59, 59, 999);
+       return completed.getTime() <= due.getTime();
+    }).length;
+    slaPercentage = Math.round((onTimeCount / tasksWithDueDateAndCompleted.length) * 100);
+  } else if (completedTasks.length > 0) {
+    slaPercentage = 100;
+  }
+
+  const pendingTasks = displayTasks.filter(t => t.status !== "Aprovado");
+  const bottleneckCounts = pendingTasks.reduce((acc, task) => {
+    if (task.category) {
+       acc[task.category] = (acc[task.category] || 0) + 1;
     }
-  });
-  if (validDeliveryTasks > 0) {
-    avgDeliveryTime = avgDeliveryTime / validDeliveryTasks;
-  }
-
-  const tasksWithDueDate = approvedTasks.filter(t => t.dueDate && t.completedAt);
-  let onTimePercentage = 0;
-  if (tasksWithDueDate.length > 0) {
-    const onTimeCount = tasksWithDueDate.filter(t => new Date(t.completedAt!) <= new Date(t.dueDate!)).length;
-    onTimePercentage = Math.round((onTimeCount / tasksWithDueDate.length) * 100);
-  } else if (approvedTasks.length > 0) {
-    onTimePercentage = 100;
-  }
-
-  const delayedCategoriesCount = delayedTasksList.reduce((acc, task) => {
-    acc[task.category] = (acc[task.category] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
   
-  let biggestBottleneck = "Nenhum";
-  if (Object.keys(delayedCategoriesCount).length > 0) {
-    biggestBottleneck = Object.keys(delayedCategoriesCount).reduce((a, b) => delayedCategoriesCount[a] > delayedCategoriesCount[b] ? a : b);
+  let currentBottleneck = "Nenhum";
+  let maxPending = 0;
+  for (const [cat, count] of Object.entries(bottleneckCounts)) {
+    if (count > maxPending) {
+      maxPending = count;
+      currentBottleneck = cat;
+    }
   }
 
   return (
@@ -189,22 +201,22 @@ export default function DashboardPage() {
               <div className="relative w-24 h-24">
                  <svg viewBox="0 0 36 36" className="w-24 h-24">
                     <path className="stroke-current text-slate-100" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path className="stroke-current text-green-500" strokeWidth="4" strokeDasharray={`${onTimePercentage}, 100`} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path className={`stroke-current ${slaPercentage >= 90 ? 'text-green-500' : slaPercentage >= 70 ? 'text-amber-500' : 'text-red-500'}`} strokeWidth="4" strokeDasharray={`${slaPercentage}, 100`} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                  </svg>
-                 <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-slate-800">{onTimePercentage}%</div>
+                 <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-slate-800">{slaPercentage}%</div>
               </div>
               <div className="flex-1 ml-6 space-y-2">
                  <div className="flex justify-between items-center">
                     <span className="text-[11px] font-medium text-slate-500">Tempo Médio Entrega</span>
-                    <span className="text-sm font-bold text-slate-800">{avgDeliveryTime > 0 ? `${avgDeliveryTime.toFixed(1)} dias` : "N/A"}</span>
+                    <span className="text-sm font-bold text-slate-800">{avgDeliveryTime > 0 ? `${avgDeliveryTime.toFixed(1)} dias` : '-'}</span>
                  </div>
                  <div className="flex justify-between items-center">
                     <span className="text-[11px] font-medium text-slate-500">Eficiência Equipe</span>
-                    <span className="text-sm font-bold text-green-600">{onTimePercentage > 0 ? `${onTimePercentage}%` : "N/A"}</span>
+                    <span className={`text-sm font-bold ${slaPercentage >= 90 ? 'text-green-600' : slaPercentage >= 70 ? 'text-amber-600' : 'text-red-600'}`}>{slaPercentage}%</span>
                  </div>
                  <div className="flex justify-between items-center border-t border-slate-100 pt-2">
                     <span className="text-[11px] font-medium text-slate-500">Gargalos Atuais</span>
-                    <span className="text-sm font-bold text-red-500 uppercase text-[10px]">{biggestBottleneck}</span>
+                    <span className="text-sm font-bold text-red-500 uppercase text-[10px]">{currentBottleneck}</span>
                  </div>
               </div>
             </div>

@@ -32,16 +32,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+    <div className="flex h-screen w-full items-center justify-center bg-blue-950">
+      <div className="w-full max-w-md bg-blue-900 rounded-2xl shadow-xl p-8 border border-blue-800">
         <div className="flex flex-col items-center mb-8">
           <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-12 object-contain mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800">Acesso ao Sistema</h1>
-          <p className="text-sm text-slate-500 text-center">Entre com suas credenciais para gerenciar demandas.</p>
+          <h1 className="text-2xl font-bold text-white">Acesso ao Sistema</h1>
+          <p className="text-sm text-blue-200 text-center">Entre com suas credenciais para gerenciar demandas.</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email" className="text-white">E-mail</Label>
             <Input 
               id="email" 
               type="email" 
@@ -49,12 +49,13 @@ export default function LoginPage() {
               value={email} 
               onChange={e => setEmail(e.target.value)}
               required
+              className="bg-blue-950 border-blue-800 text-white placeholder:text-blue-400"
             />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Senha</Label>
-              <a href="/forgot-password" className="text-xs text-blue-600 hover:underline">Esqueceu a senha?</a>
+              <Label htmlFor="password" className="text-white">Senha</Label>
+              <a href="/forgot-password" className="text-xs text-blue-300 hover:text-white hover:underline">Esqueceu a senha?</a>
             </div>
             <Input 
               id="password" 
@@ -62,9 +63,10 @@ export default function LoginPage() {
               value={password} 
               onChange={e => setPassword(e.target.value)}
               required
+              className="bg-blue-950 border-blue-800 text-white"
             />
           </div>
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>

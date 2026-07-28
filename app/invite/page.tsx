@@ -85,33 +85,33 @@ function InviteContent() {
 
   if (!inviteData) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4 text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Convite Inválido</h1>
-        <p className="text-slate-500 mb-6">O link que você acessou não contém um convite válido.</p>
-        <Button onClick={() => router.push("/login")} variant="outline">Voltar para o Login</Button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-blue-950 p-4 text-center">
+        <h1 className="text-2xl font-bold text-white mb-2">Convite Inválido</h1>
+        <p className="text-blue-200 mb-6">O link que você acessou não contém um convite válido.</p>
+        <Button onClick={() => router.push("/login")} variant="outline" className="border-blue-700 text-blue-950 hover:bg-blue-100">Voltar para o Login</Button>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+    <div className="flex h-screen w-full items-center justify-center bg-blue-950 p-4">
+      <div className="w-full max-w-md bg-blue-900 rounded-2xl shadow-xl p-8 border border-blue-800">
         <div className="flex flex-col items-center mb-8">
           <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-12 object-contain mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800 text-center leading-tight">Olá, {inviteData.name}</h1>
-          <p className="text-sm text-slate-500 text-center mt-2">
+          <h1 className="text-2xl font-bold text-white text-center leading-tight">Olá, {inviteData.name}</h1>
+          <p className="text-sm text-blue-200 text-center mt-2">
             Você foi convidado para participar do <strong>Genesis Hub</strong>. <br/>
             Sua função será <strong>{inviteData.role}</strong> no setor <strong>{inviteData.department}</strong>.
             {inviteData.type && <><br/>Tipo de acesso: <strong>{inviteData.type}</strong></>}
           </p>
-          <p className="text-sm font-medium text-slate-700 text-center mt-4">
+          <p className="text-sm font-medium text-blue-100 text-center mt-4">
             Para aceitar o convite, crie sua conta com e-mail e senha abaixo.
           </p>
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Seu E-mail</Label>
+            <Label htmlFor="email" className="text-white">Seu E-mail</Label>
             <Input 
               id="email" 
               type="email" 
@@ -119,10 +119,11 @@ function InviteContent() {
               value={email} 
               onChange={e => setEmail(e.target.value)}
               required
+              className="bg-blue-950 border-blue-800 text-white placeholder:text-blue-400"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Crie uma Senha</Label>
+            <Label htmlFor="password" className="text-white">Crie uma Senha</Label>
             <Input 
               id="password" 
               type="password" 
@@ -131,10 +132,11 @@ function InviteContent() {
               onChange={e => setPassword(e.target.value)}
               required
               minLength={6}
+              className="bg-blue-950 border-blue-800 text-white placeholder:text-blue-400"
             />
           </div>
 
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 mt-2" disabled={loading}>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 mt-2 text-white" disabled={loading}>
             {loading ? "Criando Conta..." : "Criar Conta e Acessar"}
           </Button>
         </form>
@@ -145,7 +147,7 @@ function InviteContent() {
 
 export default function InvitePage() {
   return (
-    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-slate-50"><div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div></div>}>
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-blue-950"><div className="w-8 h-8 rounded-full border-4 border-blue-900 border-t-blue-500 animate-spin"></div></div>}>
       <InviteContent />
     </Suspense>
   );
