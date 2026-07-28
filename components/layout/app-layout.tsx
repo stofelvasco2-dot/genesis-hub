@@ -2,27 +2,11 @@
 
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
-import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/lib/sidebar-context";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
-      if (window.innerWidth >= 1024) {
-        setIsSidebarOpen(true);
-      } else {
-        setIsSidebarOpen(false);
-      }
-    };
-    
-    checkIsMobile();
-    window.addEventListener("resize", checkIsMobile);
-    return () => window.removeEventListener("resize", checkIsMobile);
-  }, []);
+  const { isSidebarOpen, setIsSidebarOpen, isMobile } = useSidebar();
 
   return (
     <div className="flex h-screen w-full bg-slate-50 font-sans text-slate-900 overflow-hidden">

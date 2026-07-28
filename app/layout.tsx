@@ -3,6 +3,7 @@ import './globals.css';
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { StoreProvider } from '@/lib/store';
+import { SidebarProvider } from '@/lib/sidebar-context';
 import { Toaster } from '@/components/ui/sonner';
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
@@ -17,8 +18,10 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body suppressHydrationWarning>
         <StoreProvider>
-          {children}
-          <Toaster />
+          <SidebarProvider>
+            {children}
+            <Toaster />
+          </SidebarProvider>
         </StoreProvider>
       </body>
     </html>
