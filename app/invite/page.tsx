@@ -45,6 +45,7 @@ function InviteContent() {
           nome: inviteData.name,
           cargo: inviteData.role,
           tipo_usuario: inviteData.type || 'Colaborador',
+          department: inviteData.department,
         }
       }
     });
@@ -64,12 +65,14 @@ function InviteContent() {
         return;
       }
 
-      // Se a confirmação de e-mail estiver desativada (recomendado), a sessão existe e podemos fazer o upsert
-      const { error: dbError } = await supabase.from('perfis').upsert([{
+      // Se a confirmação de e-mail estiver desativada (recomendado), a sessão existe e podemos fazer o upsert.
+      // O trigger on_auth_user_created (banco de dados) já deve ter criado a linha em "users"
+      // no momento do signUp acima; este upsert só garante nome/cargo/departamento corretos.
+      const { error: dbError } = await supabase.from('users').upsert([{
         id: authData.user.id,
-        nome: inviteData.name,
-        cargo: inviteData.role,
-        tipo_usuario: inviteData.type || 'Colaborador',
+        name: inviteData.name,
+        role: inviteData.role,
+        department: inviteData.department,
         email: email
       }], { onConflict: 'id' });
 
@@ -151,4 +154,4 @@ export default function InvitePage() {
       <InviteContent />
     </Suspense>
   );
-}
+} 

@@ -27,6 +27,28 @@ type StoreContextType = {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+async function resolveCurrentUser(session: any): Promise<User | null> {
+  if (!supabase) return null;
+
+  // Busca por ID (não por e-mail) — é o vínculo real e evita duplicidade/atraso do trigger.
+  const { data: existingUser } = await supabase.from("users").select("*").eq("id", session.user.id).maybeSingle();
+  if (existingUser) return existingUser;
+
+  // Autocura: se por algum motivo o trigger do banco (on_auth_user_created) não
+  // criou a linha ainda, criamos aqui mesmo, usando os metadados do cadastro/convite.
+  const meta = session.user.user_metadata || {};
+  const newUser = {
+    id: session.user.id,
+    email: session.user.email,
+    name: meta.nome || meta.name || session.user.email?.split("@")[0] || "Usuário",
+    role: meta.cargo || meta.role || "Colaborador",
+    department: meta.department || null,
+  };
+
+  const { data: createdUser } = await supabase.from("users").insert([newUser]).select().single();
+  return createdUser || null;
+}
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -101,18 +123,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        const { data: existingUser } = await supabase!.from("users").select("*").eq("email", session.user.email).single();
-        if (existingUser) {
-          setCurrentUser(existingUser);
-        } else if (session.user.email === "gustavostofel21@gmail.com") {
-          const newUser = {
-            id: session.user.id,
-            email: session.user.email,
-            name: "Gustavo",
-            role: "Admin",
-          };
-          const { data: createdUser } = await supabase!.from("users").insert([newUser]).select().single();
-          if (createdUser) setCurrentUser(createdUser);
+        const resolvedUser = await resolveCurrentUser(session);
+        if (resolvedUser) {
+          setCurrentUser(resolvedUser);
         } else {
           toast.error("Usuário não encontrado na base de dados do sistema.");
           await supabase!.auth.signOut();
@@ -128,18 +141,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          const { data: existingUser } = await supabase!.from("users").select("*").eq("email", session.user.email).single();
-          if (existingUser) {
-            setCurrentUser(existingUser);
-          } else if (session.user.email === "gustavostofel21@gmail.com") {
-            const newUser = {
-              id: session.user.id,
-              email: session.user.email,
-              name: "Gustavo",
-              role: "Admin",
-            };
-            const { data: createdUser } = await supabase!.from("users").insert([newUser]).select().single();
-            if (createdUser) setCurrentUser(createdUser);
+          const resolvedUser = await resolveCurrentUser(session);
+          if (resolvedUser) {
+            setCurrentUser(resolvedUser);
           } else {
             toast.error("Usuário não encontrado na base de dados do sistema.");
             await supabase!.auth.signOut();
@@ -323,4 +327,4 @@ export function useStore() {
     throw new Error("useStore must be used within a StoreProvider");
   }
   return context;
-}
+} 

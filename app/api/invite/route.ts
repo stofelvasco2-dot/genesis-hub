@@ -24,8 +24,7 @@ export async function POST(req: Request) {
 
     const { error: dbError } = await supabaseAdmin
       .from('users')
-      .update({ role, department })
-      .eq('id', authData.user.id);
+      .upsert([{ id: authData.user.id, email, name, role, department }], { onConflict: 'id' });
 
     if (dbError) {
       console.error("Erro ao atualizar dados complementares do usuário: ", dbError.message);
