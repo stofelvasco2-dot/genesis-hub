@@ -62,7 +62,6 @@ function InviteContent() {
           nome: inviteData.name,
           cargo: inviteData.role,
           role: inviteData.type || 'Colaborador',
-          tipo_usuario: inviteData.role,
           department: inviteData.department,
         }
       }
@@ -85,7 +84,6 @@ function InviteContent() {
         id: authData.user.id,
         name: inviteData.name,
         role: inviteData.type || 'Colaborador',
-        tipo_usuario: inviteData.role,
         department: inviteData.department,
         email: email
       }], { onConflict: 'id' });

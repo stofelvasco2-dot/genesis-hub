@@ -198,7 +198,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       description: 'Solicitação criada.'
     }]);
 
-    await refreshTasks();
+    // Busca só a tarefa recém-criada (com comments/timeline) e insere na lista local.
+    // Evita recarregar as 7 tabelas do banco só pra criar 1 tarefa.
+    const { data: fullTask } = await supabase
+      .from('tasks')
+      .select('*, comments(*), timeline_events(*)')
+      .eq('id', data.id)
+      .single();
+
+    if (fullTask) {
+      const formatted: Task = {
+        ...fullTask,
+        requesterId: fullTask.requester_id,
+        requesterName: fullTask.requester_name,
+        assigneeId: fullTask.assignee_id,
+        dueDate: fullTask.due_date,
+        referenceLinks: fullTask.reference_links,
+        createdAt: fullTask.created_at,
+        updatedAt: fullTask.updated_at,
+        startedAt: fullTask.started_at,
+        distributedAt: fullTask.distributed_at,
+        completedAt: fullTask.completed_at,
+        externalConsultant: fullTask.external_consultant,
+        internalConsultant: fullTask.internal_consultant,
+        comments: (fullTask.comments || []).map((c: any) => ({ ...c, userId: c.user_id, createdAt: c.created_at })),
+        timeline: (fullTask.timeline_events || []).map((e: any) => ({ ...e, userId: e.user_id, createdAt: e.created_at }))
+          .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+      };
+      setTasks(prev => [formatted, ...prev]);
+    }
   };
 
   const updateTask = async (id: string, updates: Partial<Task>, modifierId: string) => {
@@ -251,7 +279,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }]);
     }
 
-    await refreshTasks();
+    // Atualização otimista: aplica a mudança localmente na hora, sem esperar
+    // nem recarregar TODAS as tabelas do banco. A tela nunca "pisca".
+    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
   };
 
   const moveTaskStatus = async (id: string, newStatus: string, modifierId: string) => {
@@ -327,4 +357,4 @@ export function useStore() {
     throw new Error("useStore must be used within a StoreProvider");
   }
   return context;
-} 
+}

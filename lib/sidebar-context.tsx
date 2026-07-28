@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 interface SidebarContextValue {
   isSidebarOpen: boolean;
@@ -13,7 +13,9 @@ const SidebarContext = createContext<SidebarContextValue | null>(null);
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [hasInitialized, setHasInitialized] = useState(false);
+  // useRef (não useState) porque precisa ser lido com o valor mais atual
+  // dentro do listener de "resize", sem sofrer de closure desatualizada.
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -21,17 +23,16 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       setIsMobile(mobile);
       // Só define o estado inicial do sidebar UMA vez (no primeiro carregamento
       // real da aplicação). Depois disso, o usuário controla manualmente e
-      // trocar de página/aba nunca mais reseta esse estado.
-      if (!hasInitialized) {
+      // nada mais reseta esse estado (nem trocar de aba, nem voltar pro app).
+      if (!hasInitialized.current) {
         setIsSidebarOpen(!mobile);
+        hasInitialized.current = true;
       }
     };
 
     checkIsMobile();
-    setHasInitialized(true);
     window.addEventListener("resize", checkIsMobile);
     return () => window.removeEventListener("resize", checkIsMobile);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
