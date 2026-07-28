@@ -44,7 +44,8 @@ function InviteContent() {
         data: {
           nome: inviteData.name,
           cargo: inviteData.role,
-          tipo_usuario: inviteData.type || 'Colaborador',
+          role: inviteData.type || 'Colaborador',
+          tipo_usuario: inviteData.role,
           department: inviteData.department,
         }
       }
@@ -71,7 +72,8 @@ function InviteContent() {
       const { error: dbError } = await supabase.from('users').upsert([{
         id: authData.user.id,
         name: inviteData.name,
-        role: inviteData.role,
+        role: inviteData.type || 'Colaborador',
+        tipo_usuario: inviteData.role,
         department: inviteData.department,
         email: email
       }], { onConflict: 'id' });
@@ -154,4 +156,4 @@ export default function InvitePage() {
       <InviteContent />
     </Suspense>
   );
-} 
+}
