@@ -27,7 +27,7 @@ export function KanbanBoard() {
     }
   };
 
-  const displayTasks = tasks.filter(t => t.assigneeId === currentUser?.id || currentUser?.role !== "Colaborador");
+  const displayTasks = tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id || currentUser?.role !== "Colaborador");
 
   return (
     <AppLayout>
