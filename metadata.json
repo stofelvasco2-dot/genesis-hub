@@ -1,0 +1,6 @@
+{
+  "name": "Genesis Hub",
+  "description": "Sistema web para gerenciamento interno das demandas do setor de Marketing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
