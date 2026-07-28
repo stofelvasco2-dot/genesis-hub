@@ -31,8 +31,8 @@ export function KanbanBoard() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col h-full space-y-6 p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col h-full min-h-0 overflow-hidden space-y-6 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Demandas</h2>
             <p className="text-muted-foreground mt-2">Acompanhamento e execução das demandas.</p>
@@ -71,7 +71,7 @@ export function KanbanBoard() {
 
         {view === "kanban" && (
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex flex-1 gap-6 overflow-x-auto pb-4">
+            <div className="flex flex-1 min-h-0 gap-6 overflow-x-auto overflow-y-hidden pb-4">
               {statuses.map(status => {
                 const colTasks = displayTasks.filter(t => t.status === status);
                 return <KanbanColumn key={status} column={{ id: status, title: status }} tasks={colTasks} />;
@@ -81,9 +81,9 @@ export function KanbanBoard() {
         )}
 
         {view === "list" && (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden overflow-x-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto bg-white rounded-xl border border-slate-200">
             <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-200 sticky top-0">
                 <tr>
                   <th className="px-6 py-4">ID</th>
                   <th className="px-6 py-4">Título</th>
@@ -113,7 +113,7 @@ export function KanbanBoard() {
         )}
 
         {view === "cards" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-4">
+          <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-4">
             {displayTasks.map(task => {
               const assignee = users.find(u => u.id === task.assigneeId);
               return (

@@ -11,9 +11,9 @@ export function Header({ toggleSidebar, isSidebarOpen, isMobile }: { toggleSideb
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10 shrink-0">
       <div className="flex items-center gap-4 flex-1 overflow-hidden">
-        {toggleSidebar && (
+        {toggleSidebar && isMobile && (
           <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-slate-500 hover:text-slate-700 shrink-0">
-            {isMobile ? <Menu className="w-5 h-5" /> : <PanelLeft className="w-5 h-5" />}
+            <Menu className="w-5 h-5" />
           </Button>
         )}
         <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight truncate">Gestão de Demandas</h1>

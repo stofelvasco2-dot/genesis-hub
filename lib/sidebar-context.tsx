@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 interface SidebarContextValue {
   isSidebarOpen: boolean;
@@ -11,29 +11,27 @@ interface SidebarContextValue {
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // No mobile, o usuário controla (drawer que abre/fecha). No desktop, a
+  // barra lateral fica sempre fixa/aberta — sem nenhuma lógica de
+  // abrir/fechar automática, então não tem mais como "piscar".
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  // useRef (não useState) porque precisa ser lido com o valor mais atual
-  // dentro do listener de "resize", sem sofrer de closure desatualizada.
-  const hasInitialized = useRef(false);
 
   useEffect(() => {
     const checkIsMobile = () => {
-      const mobile = window.innerWidth < 1024; // lg breakpoint
-      setIsMobile(mobile);
-      // Só define o estado inicial do sidebar UMA vez (no primeiro carregamento
-      // real da aplicação). Depois disso, o usuário controla manualmente e
-      // nada mais reseta esse estado (nem trocar de aba, nem voltar pro app).
-      if (!hasInitialized.current) {
-        setIsSidebarOpen(!mobile);
-        hasInitialized.current = true;
-      }
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
     };
-
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
     return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
+
+  const isSidebarOpen = isMobile ? isMobileSidebarOpen : true;
+
+  const setIsSidebarOpen = (val: boolean) => {
+    // No desktop a barra é sempre fixa: ignora qualquer tentativa de fechar.
+    if (isMobile) setIsMobileSidebarOpen(val);
+  };
 
   return (
     <SidebarContext.Provider value={{ isSidebarOpen, setIsSidebarOpen, isMobile }}>
