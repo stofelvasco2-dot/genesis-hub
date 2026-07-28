@@ -1,6 +1,5 @@
 "use client";
 
-import { AppLayout } from "@/components/layout/app-layout";
 import { useStore } from "@/lib/store";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./column";
@@ -30,7 +29,6 @@ export function KanbanBoard() {
   const displayTasks = tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id || currentUser?.role !== "Colaborador");
 
   return (
-    <AppLayout>
       <div className="flex flex-col h-full min-h-0 overflow-hidden space-y-6 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
@@ -123,7 +121,6 @@ export function KanbanBoard() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }
 

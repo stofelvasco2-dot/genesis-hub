@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { AppLayout } from "@/components/layout/app-layout";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,7 +124,6 @@ export default function SettingsPage() {
   );
 
   return (
-    <AppLayout>
       <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
@@ -221,6 +219,5 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 }

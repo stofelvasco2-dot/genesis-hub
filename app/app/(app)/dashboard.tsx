@@ -1,6 +1,5 @@
 "use client";
 
-import { AppLayout } from "@/components/layout/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { isToday, isPast, parseISO } from "date-fns";
@@ -91,8 +90,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto flex flex-col">
+    <div className="p-6 space-y-6 flex-1 overflow-y-auto flex flex-col">
         {/* Top Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-slate-400">
@@ -223,7 +221,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 
 }
