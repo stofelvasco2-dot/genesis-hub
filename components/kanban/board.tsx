@@ -26,7 +26,13 @@ export function KanbanBoard() {
     }
   };
 
-  const displayTasks = tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id || currentUser?.role !== "Colaborador");
+  // Admin e Gestor enxergam todas as demandas, independente de quem criou ou
+  // é o responsável — igual à mesma regra já usada no Dashboard e em Tarefas.
+  // Colaborador só vê o que ele criou ou o que foi atribuído a ele.
+  const isGestorOrAdmin = currentUser?.role === "Admin" || currentUser?.role === "Gestor";
+  const displayTasks = isGestorOrAdmin
+    ? tasks
+    : tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id);
 
   return (
       <div className="flex flex-col h-full min-h-0 overflow-hidden space-y-6 p-6">
