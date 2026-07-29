@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Task, User, Category, Priority, Status, Comment, TimelineEvent } from "./types";
 import { supabase } from "./supabase";
 import { useRouter, usePathname } from "next/navigation";
@@ -64,9 +64,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Refs pra sempre ler o valor mais atual dentro do efeito de auth sem
+  // precisar recriar (e re-executar) o efeito a cada navegação.
+  const pathnameRef = useRef(pathname);
+  const routerRef = useRef(router);
+  const currentUserIdRef = useRef<string | null>(null);
+  const hasLoadedOnceRef = useRef(false);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+  useEffect(() => {
+    currentUserIdRef.current = currentUser?.id ?? null;
+  }, [currentUser]);
+
   const fetchData = async () => {
     if (!supabase) return;
-    setIsLoaded(false);
+    // Só mostra o spinner de tela cheia na primeira carga. Recargas
+    // posteriores (refreshTasks, reconexão etc.) acontecem em segundo plano,
+    // sem substituir a tela inteira — é isso que fazia tudo "piscar".
+    if (!hasLoadedOnceRef.current) setIsLoaded(false);
     
     const [usersRes, tasksRes, deptRes, catRes, prioRes, statRes, roleRes] = await Promise.all([
       supabase.from('users').select('*'),
@@ -111,8 +131,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     
     setIsLoaded(true);
+    hasLoadedOnceRef.current = true;
   };
 
+  // Roda só uma vez, na montagem do app — não a cada troca de rota/aba.
+  // É isso que fazia a tela (e a sidebar) piscar toda vez que você navegava
+  // dentro do sistema: antes, esse efeito tinha [pathname, router] como
+  // dependência, então recarregava tudo do zero a cada clique no menu.
   useEffect(() => {
     const initAuth = async () => {
       if (!supabase) {
@@ -134,13 +159,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       } else {
         setIsLoaded(true);
         const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/invite'];
-        if (!publicRoutes.includes(pathname)) {
-          router.push('/login');
+        if (!publicRoutes.includes(pathnameRef.current)) {
+          routerRef.current.push('/login');
         }
       }
 
       const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
+          // O Supabase reemite SIGNED_IN sempre que a aba do navegador volta a
+          // ficar em foco (checagem/renovação de sessão), não só num login de
+          // verdade. Se já é o mesmo usuário carregado, ignora — evita
+          // recarregar tudo e piscar a tela ao voltar de outra aba.
+          if (currentUserIdRef.current === session.user.id) return;
+
           const resolvedUser = await resolveCurrentUser(session);
           if (resolvedUser) {
             setCurrentUser(resolvedUser);
@@ -149,13 +180,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             await supabase!.auth.signOut();
           }
           fetchData();
-          if (pathname === '/login') {
-            router.push('/');
+          if (pathnameRef.current === '/login') {
+            routerRef.current.push('/');
           }
         } else if (event === 'SIGNED_OUT') {
           setCurrentUser(null);
           setTasks([]);
-          router.push('/login');
+          hasLoadedOnceRef.current = false;
+          routerRef.current.push('/login');
         }
       });
 
@@ -164,7 +196,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       };
     };
     initAuth();
-  }, [pathname, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Se um usuário desloga e outro loga sem dar refresh na página (troca de
+  // conta), garante o redirecionamento mesmo fora do fluxo normal de rota.
+  useEffect(() => {
+    if (!currentUser && isLoaded) {
+      const publicRoutes = ['/login', '/forgot-password', '/reset-password', '/invite'];
+      if (!publicRoutes.includes(pathname)) {
+        router.push('/login');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, isLoaded, pathname]);
 
   const refreshTasks = async () => {
     await fetchData();
