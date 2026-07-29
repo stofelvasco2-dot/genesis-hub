@@ -276,7 +276,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const updateTask = async (id: string, updates: Partial<Task>, modifierId: string) => {
     if (!supabase) return;
-    
+
+    const currentTask = tasks.find(t => t.id === id);
+    if (!currentTask) return;
+
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
@@ -290,15 +293,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (updates.externalConsultant !== undefined) dbUpdates.external_consultant = updates.externalConsultant;
     if (updates.internalConsultant !== undefined) dbUpdates.internal_consultant = updates.internalConsultant;
 
+    // Carimbos automáticos do ciclo de vida da tarefa — sem isso, started_at/
+    // distributed_at/completed_at ficavam sempre NULL e o card de "Performance
+    // (SLA)" do dashboard nunca tinha dado pra calcular nada (sempre 0%/"-").
+    const now = new Date().toISOString();
+    const localExtras: Partial<Task> = {};
+
+    if (updates.status !== undefined && updates.status !== currentTask.status) {
+      // Primeira vez que sai de "Triagem": marca início do atendimento.
+      if (currentTask.status === "Triagem" && !currentTask.startedAt) {
+        dbUpdates.started_at = now;
+        localExtras.startedAt = now;
+      }
+      // Chegou em "Aprovado": marca conclusão (pra contar no SLA).
+      if (updates.status === "Aprovado") {
+        dbUpdates.completed_at = now;
+        localExtras.completedAt = now;
+      }
+      // Reaberta depois de aprovada (voltou de "Aprovado" pra outro status):
+      // limpa completed_at, senão o SLA continuaria contando ela como concluída.
+      if (currentTask.status === "Aprovado" && updates.status !== "Aprovado") {
+        dbUpdates.completed_at = null;
+        localExtras.completedAt = undefined;
+      }
+    }
+
+    // Primeira vez que a tarefa recebe um responsável: marca distribuição.
+    if (
+      updates.assigneeId !== undefined &&
+      updates.assigneeId &&
+      updates.assigneeId !== currentTask.assigneeId &&
+      !currentTask.distributedAt
+    ) {
+      dbUpdates.distributed_at = now;
+      localExtras.distributedAt = now;
+    }
+
     const { error } = await supabase.from('tasks').update(dbUpdates).eq('id', id);
     
     if (error) {
       toast.error('Erro ao atualizar: ' + error.message);
       return;
     }
-
-    const currentTask = tasks.find(t => t.id === id);
-    if (!currentTask) return;
 
     if (updates.status && updates.status !== currentTask.status) {
       await supabase.from('timeline_events').insert([{
@@ -326,7 +362,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     // Atualização otimista: aplica a mudança localmente na hora, sem esperar
     // nem recarregar TODAS as tabelas do banco. A tela nunca "pisca".
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates, ...localExtras } : t)));
   };
 
   const moveTaskStatus = async (id: string, newStatus: string, modifierId: string) => {
