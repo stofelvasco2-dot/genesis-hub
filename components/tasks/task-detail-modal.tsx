@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -173,7 +172,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                       <SelectTrigger className="h-8 text-xs font-semibold bg-slate-50"><SelectValue>{currentTask.assigneeId ? users.find(u => u.id === currentTask.assigneeId)?.name : "Sem responsável"}</SelectValue></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned" className="text-xs">Sem responsável</SelectItem>
-                        {users.filter(u => u.role !== 'Admin').map(u => (
+                        {users.map(u => (
                           <SelectItem key={u.id} value={u.id} className="text-xs">{u.name}</SelectItem>
                         ))}
                       </SelectContent>
