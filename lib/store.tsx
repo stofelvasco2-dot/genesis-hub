@@ -231,6 +231,89 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, isLoaded, pathname]);
 
+  // Tempo real: assim que alguém muda um card ou cria/atualiza uma tarefa,
+  // todo mundo com a tela aberta vê na hora — sem precisar dar F5. E o sino
+  // de notificação aparece instantaneamente pra quem foi avisado.
+  useEffect(() => {
+    if (!supabase || !currentUser?.id) return;
+    const client = supabase;
+
+    const channel = client
+      .channel(`realtime-${currentUser.id}`)
+      // Notificações: só as que são PARA este usuário (o filtro já garante
+      // isso, então nem precisamos checar de novo no código).
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
+        (payload) => {
+          const n = payload.new as any;
+          setNotifications(prev => {
+            if (prev.some(existing => existing.id === n.id)) return prev;
+            return [{
+              id: n.id, userId: n.user_id, taskId: n.task_id, title: n.title,
+              message: n.message, type: n.type, read: n.read, createdAt: n.created_at,
+            }, ...prev];
+          });
+        }
+      )
+      // Tarefas: qualquer criação/atualização/exclusão, de qualquer pessoa.
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const oldId = (payload.old as any)?.id;
+            if (oldId) setTasks(prev => prev.filter(t => t.id !== oldId));
+            return;
+          }
+
+          const t = payload.new as any;
+          if (!t) return;
+
+          const mapped = {
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            category: t.category,
+            priority: t.priority,
+            status: t.status,
+            notes: t.notes,
+            requesterId: t.requester_id,
+            requesterName: t.requester_name,
+            assigneeId: t.assignee_id,
+            department: t.department,
+            dueDate: t.due_date,
+            referenceLinks: t.reference_links,
+            createdAt: t.created_at,
+            updatedAt: t.updated_at,
+            startedAt: t.started_at,
+            distributedAt: t.distributed_at,
+            completedAt: t.completed_at,
+            externalConsultant: t.external_consultant,
+            internalConsultant: t.internal_consultant,
+          };
+
+          setTasks(prev => {
+            const idx = prev.findIndex(existing => existing.id === t.id);
+            if (idx === -1) {
+              // Card novo criado por outra pessoa: entra na lista (sem
+              // comments/timeline ainda — completam quando o card for aberto).
+              if (payload.eventType !== 'INSERT') return prev;
+              return [{ ...mapped, comments: [], timeline: [] } as Task, ...prev];
+            }
+            // Card existente: atualiza só os campos, preservando
+            // comments/timeline que já estavam carregados localmente.
+            return prev.map((existing, i) => (i === idx ? { ...existing, ...mapped } : existing));
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [currentUser?.id]);
+
   const refreshTasks = async () => {
     await fetchData();
   };
