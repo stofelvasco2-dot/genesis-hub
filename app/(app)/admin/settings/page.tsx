@@ -211,9 +211,9 @@ export default function SettingsPage() {
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Colaborador">Colaborador</SelectItem>
-                  <SelectItem value="Gestor">Gestor</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -325,9 +325,9 @@ export default function SettingsPage() {
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Colaborador">Colaborador</SelectItem>
-                  <SelectItem value="Gestor">Gestor</SelectItem>
+                  {roles.map(r => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
