@@ -1,7 +1,6 @@
 "use client";
 
 import { Bell, UserPlus, ArrowRightCircle, Info, CheckCheck, MessageSquare, CalendarClock } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useStore } from "@/lib/store";
 import { formatDistanceToNow } from "date-fns";
@@ -27,15 +26,13 @@ export function NotificationBell() {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative text-slate-500 hover:text-slate-700 shrink-0">
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Button>
+      <PopoverTrigger className="relative inline-flex items-center justify-center size-8 shrink-0 rounded-lg text-slate-500 hover:bg-muted hover:text-slate-700 transition-colors">
+        <Bell className="w-5 h-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">

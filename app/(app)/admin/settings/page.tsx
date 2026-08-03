@@ -321,7 +321,7 @@ export default function SettingsPage() {
           <div className="flex flex-wrap items-end gap-3 mb-5">
             <div className="flex-1 min-w-[160px] space-y-1.5">
               <Label className="text-xs">Etapa</Label>
-              <Select value={ownerStatus} onValueChange={setOwnerStatus}>
+              <Select value={ownerStatus} onValueChange={(value) => setOwnerStatus(value ?? "")}>
                 <SelectTrigger><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
                 <SelectContent>
                   {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -330,7 +330,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1 min-w-[160px] space-y-1.5">
               <Label className="text-xs">Responsável</Label>
-              <Select value={ownerUserId} onValueChange={setOwnerUserId}>
+              <Select value={ownerUserId} onValueChange={(value) => setOwnerUserId(value ?? "")}>
                 <SelectTrigger><SelectValue placeholder="Selecione a pessoa" /></SelectTrigger>
                 <SelectContent>
                   {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
