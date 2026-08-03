@@ -57,3 +57,20 @@ export type Task = {
   externalConsultant?: string;
   internalConsultant?: string;
 };
+
+export type Notification = {
+  id: string;
+  userId: string;
+  taskId?: string;
+  title: string;
+  message?: string;
+  type: 'assigned' | 'stage_owner' | 'commented' | 'due_date_changed' | 'other';
+  read: boolean;
+  createdAt: string;
+};
+
+export type StageOwner = {
+  id: string;
+  status: Status;
+  userId: string;
+};

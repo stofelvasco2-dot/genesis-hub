@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { Task, User, Category, Priority, Status, Comment, TimelineEvent } from "./types";
+import { Task, User, Category, Priority, Status, Comment, TimelineEvent, Notification, StageOwner } from "./types";
 import { supabase } from "./supabase";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,9 @@ type StoreContextType = {
   priorities: string[];
   statuses: string[];
   roles: string[];
+  notifications: Notification[];
+  unreadCount: number;
+  stageOwners: StageOwner[];
   isLoaded: boolean;
   addTask: (task: Omit<Task, "id" | "createdAt" | "comments" | "timeline" | "updatedAt">) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>, modifierId: string) => Promise<void>;
@@ -23,6 +26,10 @@ type StoreContextType = {
   signOut: () => Promise<void>;
   addOption: (type: 'departments' | 'categories' | 'priorities', name: string) => Promise<void>;
   removeOption: (type: 'departments' | 'categories' | 'priorities', name: string) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  addStageOwner: (status: string, userId: string) => Promise<void>;
+  removeStageOwner: (id: string) => Promise<void>;
 };
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -59,6 +66,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [priorities, setPriorities] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [stageOwners, setStageOwners] = useState<StageOwner[]>([]);
   
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
@@ -88,7 +97,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // sem substituir a tela inteira — é isso que fazia tudo "piscar".
     if (!hasLoadedOnceRef.current) setIsLoaded(false);
     
-    const [usersRes, tasksRes, deptRes, catRes, prioRes, statRes, roleRes] = await Promise.all([
+    const [usersRes, tasksRes, deptRes, catRes, prioRes, statRes, roleRes, notifRes, stageOwnerRes] = await Promise.all([
       supabase.from('users').select('*'),
       supabase.from('tasks').select('*, comments(*), timeline_events(*)'),
       supabase.from('departments').select('name'),
@@ -96,6 +105,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       supabase.from('priorities').select('name'),
       supabase.from('statuses').select('name'),
       supabase.from('roles').select('name'),
+      supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('stage_owners').select('*'),
     ]);
 
     if (usersRes.data) setUsers(usersRes.data);
@@ -104,6 +115,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (prioRes.data) setPriorities(prioRes.data.map(p => p.name));
     if (statRes.data) setStatuses(statRes.data.map(s => s.name));
     if (roleRes.data) setRoles(roleRes.data.map(r => r.name));
+    if (notifRes.data) {
+      setNotifications(notifRes.data.map((n: any) => ({
+        id: n.id, userId: n.user_id, taskId: n.task_id, title: n.title,
+        message: n.message, type: n.type, read: n.read, createdAt: n.created_at,
+      })));
+    }
+    if (stageOwnerRes.data) {
+      setStageOwners(stageOwnerRes.data.map((s: any) => ({ id: s.id, status: s.status, userId: s.user_id })));
+    }
 
     if (tasksRes.data) {
       const formattedTasks: Task[] = tasksRes.data.map(t => ({
@@ -215,6 +235,67 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     await fetchData();
   };
 
+  // Função central de notificação: grava no sino (tabela `notifications`) e
+  // dispara o e-mail em segundo plano. Usada tanto pra atribuição direta
+  // quanto pra "dono de etapa". Nunca notifica a própria pessoa que fez a ação.
+  const notifyUser = async (userId: string, title: string, message: string, taskId?: string, type: Notification['type'] = 'other') => {
+    if (!supabase || !userId) return;
+
+    const { data } = await supabase.from('notifications').insert([{
+      user_id: userId, task_id: taskId || null, title, message, type,
+    }]).select().single();
+
+    if (data) {
+      setNotifications(prev => [{
+        id: data.id, userId: data.user_id, taskId: data.task_id, title: data.title,
+        message: data.message, type: data.type, read: data.read, createdAt: data.created_at,
+      }, ...prev]);
+    }
+
+    const recipient = users.find(u => u.id === userId);
+    if (recipient?.email) {
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: recipient.email, title, message, taskId }),
+      }).catch(() => {
+        // Falha de e-mail nunca deve travar o fluxo do usuário no app.
+      });
+    }
+  };
+
+  const markNotificationRead = async (id: string) => {
+    if (!supabase) return;
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
+    await supabase.from('notifications').update({ read: true }).eq('id', id);
+  };
+
+  const markAllNotificationsRead = async () => {
+    if (!supabase || !currentUser) return;
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    await supabase.from('notifications').update({ read: true }).eq('user_id', currentUser.id).eq('read', false);
+  };
+
+  const addStageOwner = async (status: string, userId: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('stage_owners').insert([{ status, user_id: userId }]);
+    if (error) {
+      toast.error('Erro ao adicionar responsável: ' + error.message);
+      return;
+    }
+    await refreshTasks();
+  };
+
+  const removeStageOwner = async (id: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('stage_owners').delete().eq('id', id);
+    if (error) {
+      toast.error('Erro ao remover responsável: ' + error.message);
+      return;
+    }
+    setStageOwners(prev => prev.filter(s => s.id !== id));
+  };
+
   const addTask = async (taskData: any) => {
     if (!supabase) return;
     const { data, error } = await supabase.from('tasks').insert([{
@@ -271,6 +352,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
       };
       setTasks(prev => [formatted, ...prev]);
+
+      // Se a etapa inicial da tarefa (normalmente "Triagem") tem dono
+      // configurado, avisa essa pessoa que chegou uma demanda nova.
+      const owners = stageOwners.filter(s => s.status === formatted.status && s.userId !== taskData.requesterId);
+      for (const owner of owners) {
+        await notifyUser(
+          owner.userId,
+          `Nova demanda em ${formatted.status}`,
+          `"${formatted.title}" foi criada por ${formatted.requesterName} e está aguardando em ${formatted.status}.`,
+          formatted.id,
+          'stage_owner'
+        );
+      }
     }
   };
 
@@ -363,6 +457,55 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // Atualização otimista: aplica a mudança localmente na hora, sem esperar
     // nem recarregar TODAS as tabelas do banco. A tela nunca "pisca".
     setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates, ...localExtras } : t)));
+
+    // Notifica quem virou responsável pela demanda (se não foi ele mesmo que se atribuiu).
+    if (
+      updates.assigneeId !== undefined &&
+      updates.assigneeId &&
+      updates.assigneeId !== currentTask.assigneeId &&
+      updates.assigneeId !== modifierId
+    ) {
+      const modifier = users.find(u => u.id === modifierId)?.name || "Alguém";
+      await notifyUser(
+        updates.assigneeId,
+        `Demanda atribuída a você`,
+        `${modifier} atribuiu "${currentTask.title}" para você.`,
+        id,
+        'assigned'
+      );
+    }
+
+    // Notifica o(s) dono(s) configurado(s) da nova etapa (Configurações → Donos de Etapa).
+    if (updates.status !== undefined && updates.status !== currentTask.status) {
+      const owners = stageOwners.filter(s => s.status === updates.status && s.userId !== modifierId);
+      for (const owner of owners) {
+        await notifyUser(
+          owner.userId,
+          `Demanda chegou em ${updates.status}`,
+          `"${currentTask.title}" mudou para ${updates.status} e precisa da sua atenção.`,
+          id,
+          'stage_owner'
+        );
+      }
+    }
+
+    // Notifica quem tem relação direta com a tarefa (responsável e quem
+    // pediu) quando o prazo muda — quem fez a mudança não recebe aviso dela mesma.
+    if (updates.dueDate !== undefined && updates.dueDate !== currentTask.dueDate) {
+      const modifier = users.find(u => u.id === modifierId)?.name || "Alguém";
+      const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString("pt-BR") : "sem prazo definido");
+      const interested = new Set([currentTask.assigneeId, currentTask.requesterId].filter(Boolean) as string[]);
+      interested.delete(modifierId);
+      for (const uid of interested) {
+        await notifyUser(
+          uid,
+          `Prazo alterado`,
+          `${modifier} alterou o prazo de "${currentTask.title}" de ${fmt(currentTask.dueDate)} para ${fmt(updates.dueDate)}.`,
+          id,
+          'due_date_changed'
+        );
+      }
+    }
   };
 
   const moveTaskStatus = async (id: string, newStatus: string, modifierId: string) => {
@@ -387,8 +530,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       task_id: taskId,
       type: 'commented',
       user_id: userId,
-      description: 'Comentário adicionado.'
+      description: 'comentou na demanda.'
     }]);
+
+    // Notifica responsável e quem pediu a demanda sobre o comentário novo
+    // (menos quem comentou, óbvio).
+    const commentedTask = tasks.find(t => t.id === taskId);
+    if (commentedTask) {
+      const commenter = users.find(u => u.id === userId)?.name || "Alguém";
+      const preview = text.length > 120 ? text.slice(0, 120) + "…" : text;
+      const interested = new Set([commentedTask.assigneeId, commentedTask.requesterId].filter(Boolean) as string[]);
+      interested.delete(userId);
+      for (const uid of interested) {
+        await notifyUser(
+          uid,
+          `Novo comentário em "${commentedTask.title}"`,
+          `${commenter}: "${preview}"`,
+          taskId,
+          'commented'
+        );
+      }
+    }
 
     await refreshTasks();
   };
@@ -421,11 +583,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return <div className="flex h-screen items-center justify-center bg-slate-50"><div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div></div>;
   }
 
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   return (
     <StoreContext.Provider value={{ 
       users, currentUser, tasks, departments, categories, priorities, statuses, roles, 
+      notifications, unreadCount, stageOwners,
       isLoaded, addTask, updateTask, addComment, moveTaskStatus, refreshTasks, signOut,
-      addOption, removeOption
+      addOption, removeOption, markNotificationRead, markAllNotificationsRead,
+      addStageOwner, removeStageOwner
     }}>
       {children}
     </StoreContext.Provider>

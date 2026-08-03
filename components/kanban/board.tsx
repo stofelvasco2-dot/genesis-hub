@@ -4,18 +4,25 @@ import { useStore } from "@/lib/store";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { KanbanColumn } from "./column";
 import { Status, Task } from "@/lib/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LayoutGrid, List, Trello } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
-
-
+import { useSearchParams, useRouter } from "next/navigation";
 
 export function KanbanBoard() {
   const { tasks, currentUser, moveTaskStatus, users, statuses } = useStore();
   const [view, setView] = useState<"kanban" | "list" | "cards">("kanban");
+
+  // Deep-link: clicar numa notificação leva pra /kanban?task=<id> e abre o
+  // modal dessa tarefa direto, sem precisar caçar o card na tela.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const deepLinkTaskId = searchParams.get("task");
+  const deepLinkTask = deepLinkTaskId ? tasks.find(t => t.id === deepLinkTaskId) : undefined;
+  const closeDeepLink = () => router.replace("/kanban");
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -35,6 +42,7 @@ export function KanbanBoard() {
     : tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id);
 
   return (
+    <>
       <div className="flex flex-col h-full min-h-0 overflow-hidden space-y-6 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
@@ -127,6 +135,15 @@ export function KanbanBoard() {
           </div>
         )}
       </div>
+
+      {deepLinkTask && (
+        <TaskDetailModal
+          task={deepLinkTask}
+          open={true}
+          onOpenChange={(open) => { if (!open) closeDeepLink(); }}
+        />
+      )}
+    </>
   );
 }
 

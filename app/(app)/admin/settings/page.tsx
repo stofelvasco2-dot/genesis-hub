@@ -12,7 +12,7 @@ import { useStore } from "@/lib/store";
 import { User } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { roles, users, refreshTasks } = useStore();
+  const { roles, users, refreshTasks, stageOwners, addStageOwner, removeStageOwner } = useStore();
   const [departments, setDepartments] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -22,6 +22,11 @@ export default function SettingsPage() {
   const [newStatus, setNewStatus] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newPriority, setNewPriority] = useState("");
+
+  // Donos de etapa
+  const [ownerStatus, setOwnerStatus] = useState("");
+  const [ownerUserId, setOwnerUserId] = useState("");
+  const [savingOwner, setSavingOwner] = useState(false);
 
   // Invite state
   const [inviteName, setInviteName] = useState("");
@@ -80,6 +85,22 @@ export default function SettingsPage() {
       toast.success("Removido com sucesso!");
       fetchData();
     }
+  };
+
+  const handleAddStageOwner = async () => {
+    if (!ownerStatus || !ownerUserId) {
+      toast.error("Escolha a etapa e o responsável.");
+      return;
+    }
+    const alreadyExists = stageOwners.some(s => s.status === ownerStatus && s.userId === ownerUserId);
+    if (alreadyExists) {
+      toast.error("Essa pessoa já é responsável por essa etapa.");
+      return;
+    }
+    setSavingOwner(true);
+    await addStageOwner(ownerStatus, ownerUserId);
+    setSavingOwner(false);
+    setOwnerUserId("");
   };
 
   const openEditUser = (user: User) => {
@@ -287,6 +308,62 @@ export default function SettingsPage() {
               </div>
             ))}
             {users.length === 0 && <p className="text-sm text-slate-400 italic">Nenhum colaborador cadastrado ainda.</p>}
+          </div>
+        </div>
+
+        {/* Donos de Etapa */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 mb-1">Donos de Etapa</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Escolha quem é avisado (no sino e por e-mail) toda vez que uma demanda chega numa etapa específica do Kanban — independente de quem é o responsável pela tarefa.
+          </p>
+
+          <div className="flex flex-wrap items-end gap-3 mb-5">
+            <div className="flex-1 min-w-[160px] space-y-1.5">
+              <Label className="text-xs">Etapa</Label>
+              <Select value={ownerStatus} onValueChange={setOwnerStatus}>
+                <SelectTrigger><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
+                <SelectContent>
+                  {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 min-w-[160px] space-y-1.5">
+              <Label className="text-xs">Responsável</Label>
+              <Select value={ownerUserId} onValueChange={setOwnerUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a pessoa" /></SelectTrigger>
+                <SelectContent>
+                  {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleAddStageOwner} disabled={savingOwner} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-1" /> Adicionar
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {statuses.filter(s => stageOwners.some(so => so.status === s)).map(status => (
+              <div key={status} className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <span className="text-xs font-bold text-slate-500 uppercase w-40 shrink-0">{status}</span>
+                <div className="flex flex-wrap gap-2">
+                  {stageOwners.filter(so => so.status === status).map(so => {
+                    const owner = users.find(u => u.id === so.userId);
+                    return (
+                      <span key={so.id} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-xs font-medium text-slate-700 px-2.5 py-1 rounded-full">
+                        {owner?.name || "Usuário removido"}
+                        <button onClick={() => removeStageOwner(so.id)} className="text-slate-400 hover:text-red-500">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            {stageOwners.length === 0 && (
+              <p className="text-sm text-slate-400 italic">Nenhuma etapa com dono configurado ainda — ninguém recebe notificação automática por etapa.</p>
+            )}
           </div>
         </div>
 
