@@ -89,6 +89,38 @@ export default function DashboardPage() {
     }
   }
 
+  // Carga de trabalho por pessoa — visão da equipe inteira (inclui Admins que
+  // também são responsáveis por demandas, não só Colaboradores). Usa `tasks`
+  // (todas), não `displayTasks`, porque essa seção só aparece pra quem já tem
+  // visão geral (Admin/Gestor); um Colaborador nunca chega a ver essa parte.
+  const activeCompanyTasks = tasks.filter(t => t.status !== "Aprovado");
+  const workload = users
+    .map(u => {
+      const assigned = activeCompanyTasks.filter(t => t.assigneeId === u.id);
+      const delayedCount = assigned.filter(t =>
+        t.dueDate && isPast(parseISO(t.dueDate)) && !isToday(parseISO(t.dueDate))
+      ).length;
+      return { user: u, active: assigned.length, delayed: delayedCount };
+    })
+    .sort((a, b) => b.active - a.active);
+
+  const maxActive = Math.max(1, ...workload.map(w => w.active));
+  const unassignedCount = activeCompanyTasks.filter(t => !t.assigneeId).length;
+
+  const roleBadgeStyle: Record<string, string> = {
+    Admin: "bg-violet-100 text-violet-700",
+    Gestor: "bg-blue-100 text-blue-700",
+    Colaborador: "bg-slate-100 text-slate-600",
+  };
+
+  const initials = (name?: string) =>
+    (name || "?")
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(p => p[0]?.toUpperCase())
+      .join("");
+
   return (
     <div className="p-6 space-y-6 flex-1 overflow-y-auto flex flex-col">
         {/* Top Metrics */}
@@ -110,6 +142,55 @@ export default function DashboardPage() {
             <p className="text-2xl font-bold text-amber-600">{dueToday}</p>
           </div>
         </div>
+
+        {/* Carga de Trabalho por Pessoa */}
+        {isGestorOrAdmin && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+            <div className="flex items-center justify-between px-5 pt-5 pb-1">
+              <div>
+                <h4 className="text-sm font-bold text-slate-800">Carga de Trabalho da Equipe</h4>
+                <p className="text-xs text-slate-400 mt-0.5">Demandas ativas por responsável, incluindo administradores</p>
+              </div>
+              {unassignedCount > 0 && (
+                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
+                  {unassignedCount} sem responsável
+                </span>
+              )}
+            </div>
+            <div className="px-5 pb-5 pt-3 divide-y divide-slate-100">
+              {workload.map(({ user, active, delayed }) => (
+                <div key={user.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                    {initials(user.name)}
+                  </div>
+                  <div className="w-40 shrink-0 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{user.name}</p>
+                    <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded uppercase mt-0.5 ${roleBadgeStyle[user.role] || "bg-slate-100 text-slate-600"}`}>
+                      {user.role}
+                    </span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-3">
+                    <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${active === 0 ? "bg-slate-200" : delayed > 0 ? "bg-red-400" : "bg-blue-500"}`}
+                        style={{ width: `${(active / maxActive) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-bold text-slate-800 w-6 text-right">{active}</span>
+                  </div>
+                  {delayed > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {delayed} atrasada{delayed > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+              ))}
+              {workload.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">Nenhum usuário cadastrado ainda.</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Kanban Snapshot */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[300px]">
