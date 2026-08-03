@@ -102,6 +102,7 @@ export default function DashboardPage() {
       ).length;
       return { user: u, active: assigned.length, delayed: delayedCount };
     })
+    .filter(w => w.active > 0)
     .sort((a, b) => b.active - a.active);
 
   const maxActive = Math.max(1, ...workload.map(w => w.active));
@@ -186,7 +187,7 @@ export default function DashboardPage() {
                 </div>
               ))}
               {workload.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-4">Nenhum usuário cadastrado ainda.</p>
+                <p className="text-sm text-slate-400 text-center py-4">Ninguém com demandas ativas no momento.</p>
               )}
             </div>
           </div>
