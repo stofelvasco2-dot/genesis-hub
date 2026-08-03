@@ -241,9 +241,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const notifyUser = async (userId: string, title: string, message: string, taskId?: string, type: Notification['type'] = 'other') => {
     if (!supabase || !userId) return;
 
-    const { data } = await supabase.from('notifications').insert([{
+    const { data, error } = await supabase.from('notifications').insert([{
       user_id: userId, task_id: taskId || null, title, message, type,
     }]).select().single();
+
+    if (error) {
+      // Antes esse erro era descartado em silêncio, e por isso a tabela de
+      // notificações ficava vazia sem nenhuma pista do motivo. Agora ele
+      // aparece no console do navegador (F12 → Console) pra diagnosticar.
+      console.error("Falha ao criar notificação:", error.message, { userId, title, type });
+      return;
+    }
 
     if (data) {
       setNotifications(prev => [{

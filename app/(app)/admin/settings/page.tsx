@@ -331,7 +331,7 @@ export default function SettingsPage() {
             <div className="flex-1 min-w-[160px] space-y-1.5">
               <Label className="text-xs">Responsável</Label>
               <Select value={ownerUserId} onValueChange={(value) => setOwnerUserId(value ?? "")}>
-                <SelectTrigger><SelectValue placeholder="Selecione a pessoa" /></SelectTrigger>
+                <SelectTrigger><SelectValue>{ownerUserId ? users.find(u => u.id === ownerUserId)?.name : "Selecione a pessoa"}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
