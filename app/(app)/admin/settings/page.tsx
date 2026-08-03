@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Trash2, Plus, Link as LinkIcon, Copy, Check } from "lucide-react";
+import { Trash2, Plus, Link as LinkIcon, Copy, Check, Pencil, Users as UsersIcon } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { User } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { roles } = useStore();
+  const { roles, users, refreshTasks } = useStore();
   const [departments, setDepartments] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -28,6 +30,14 @@ export default function SettingsPage() {
   const [inviteDept, setInviteDept] = useState("");
   const [generatedLink, setGeneratedLink] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Edição de colaborador
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState(""); // Função (Cargo) -> coluna tipo_usuario
+  const [editType, setEditType] = useState(""); // Tipo de Usuário -> coluna role
+  const [editDept, setEditDept] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchData = async () => {
     if (!supabase) return;
@@ -70,6 +80,41 @@ export default function SettingsPage() {
       toast.success("Removido com sucesso!");
       fetchData();
     }
+  };
+
+  const openEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditName(user.name || "");
+    setEditRole(user.tipo_usuario || "");
+    setEditType(user.role || "");
+    setEditDept((user.department as string) || "");
+  };
+
+  const saveEditUser = async () => {
+    if (!supabase || !editingUser) return;
+    if (!editName.trim() || !editType) {
+      toast.error("Nome e Tipo de Usuário são obrigatórios.");
+      return;
+    }
+    setSavingEdit(true);
+    const { error } = await supabase
+      .from("users")
+      .update({
+        name: editName.trim(),
+        tipo_usuario: editRole.trim() || null,
+        role: editType,
+        department: editDept || null,
+      })
+      .eq("id", editingUser.id);
+    setSavingEdit(false);
+
+    if (error) {
+      toast.error("Erro ao salvar: " + error.message);
+      return;
+    }
+    toast.success("Colaborador atualizado com sucesso!");
+    setEditingUser(null);
+    await refreshTasks();
   };
 
   const generateInviteLink = () => {
@@ -124,6 +169,7 @@ export default function SettingsPage() {
   );
 
   return (
+    <>
       <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
@@ -207,6 +253,43 @@ export default function SettingsPage() {
           )}
         </div>
 
+        {/* Colaboradores Cadastrados */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <UsersIcon className="w-4 h-4 text-slate-500" />
+            <h2 className="text-lg font-bold text-slate-800">Colaboradores Cadastrados</h2>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">Edite nome, função, tipo de usuário e setor de quem já tem conta no sistema.</p>
+
+          <div className="space-y-2">
+            {users.map(user => (
+              <div key={user.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <div className="flex-1 min-w-[140px]">
+                  <p className="text-sm font-semibold text-slate-800">{user.name}</p>
+                  <p className="text-xs text-slate-400">{user.email}</p>
+                </div>
+                <span className="text-xs text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded min-w-[100px] text-center">
+                  {user.tipo_usuario || "Sem função"}
+                </span>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${
+                  user.role === "Admin" ? "bg-violet-100 text-violet-700" :
+                  user.role === "Gestor" ? "bg-blue-100 text-blue-700" :
+                  "bg-slate-200 text-slate-600"
+                }`}>
+                  {user.role}
+                </span>
+                <span className="text-xs text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded min-w-[100px] text-center">
+                  {(user.department as string) || "Sem setor"}
+                </span>
+                <Button variant="ghost" size="icon" onClick={() => openEditUser(user)} className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+            {users.length === 0 && <p className="text-sm text-slate-400 italic">Nenhum colaborador cadastrado ainda.</p>}
+          </div>
+        </div>
+
         {/* Opções do Sistema */}
         <div>
           <h2 className="text-lg font-bold text-slate-800 mb-1">Menus do Sistema</h2>
@@ -219,5 +302,57 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de edição de colaborador */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Colaborador</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="editName" className="text-xs">Nome</Label>
+              <Input id="editName" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Ex: Gustavo" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editRole" className="text-xs">Função (Cargo)</Label>
+              <Input id="editRole" value={editRole} onChange={e => setEditRole(e.target.value)} placeholder="Ex: Designer" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Tipo de Usuário</Label>
+              <Select value={editType} onValueChange={(val) => setEditType(val || "")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Colaborador">Colaborador</SelectItem>
+                  <SelectItem value="Gestor">Gestor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Setor</Label>
+              <Select value={editDept} onValueChange={(val) => setEditDept(val || "")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map(d => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
+              <Button onClick={saveEditUser} disabled={savingEdit} className="bg-blue-600 hover:bg-blue-700">
+                {savingEdit ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

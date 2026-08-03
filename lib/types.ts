@@ -6,6 +6,7 @@ export type User = {
   id: string;
   name: string;
   role: Role;
+  tipo_usuario?: string;
   avatar?: string;
   email?: string;
   department?: Department | string;
