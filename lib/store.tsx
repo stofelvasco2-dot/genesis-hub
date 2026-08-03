@@ -241,23 +241,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const notifyUser = async (userId: string, title: string, message: string, taskId?: string, type: Notification['type'] = 'other') => {
     if (!supabase || !userId) return;
 
-    const { data, error } = await supabase.from('notifications').insert([{
+    // Importante: NÃO usar .select() aqui. Quem está criando essa notificação
+    // é sempre outra pessoa (o próprio dono nunca é notificado da sua ação),
+    // e pedir a linha de volta conta como uma leitura (SELECT) pro Postgres —
+    // que é barrada pela política "só o dono lê a própria notificação".
+    // Isso fazia o insert inteiro falhar com erro de RLS, mesmo a política
+    // de INSERT estando certa.
+    const { error } = await supabase.from('notifications').insert([{
       user_id: userId, task_id: taskId || null, title, message, type,
-    }]).select().single();
+    }]);
 
     if (error) {
-      // Antes esse erro era descartado em silêncio, e por isso a tabela de
-      // notificações ficava vazia sem nenhuma pista do motivo. Agora ele
-      // aparece no console do navegador (F12 → Console) pra diagnosticar.
       console.error("Falha ao criar notificação:", error.message, { userId, title, type });
       return;
-    }
-
-    if (data) {
-      setNotifications(prev => [{
-        id: data.id, userId: data.user_id, taskId: data.task_id, title: data.title,
-        message: data.message, type: data.type, read: data.read, createdAt: data.created_at,
-      }, ...prev]);
     }
 
     const recipient = users.find(u => u.id === userId);
