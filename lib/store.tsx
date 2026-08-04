@@ -438,7 +438,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         timeline: (fullTask.timeline_events || []).map((e: any) => ({ ...e, userId: e.user_id, createdAt: e.created_at }))
           .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
       };
-      setTasks(prev => [formatted, ...prev]);
+      // Checa se essa tarefa já foi adicionada por outro caminho (o evento
+      // de tempo real pode chegar e inserir uma versão "resumida" dela
+      // antes desse trecho terminar sua própria busca). Se já existir,
+      // substitui em vez de duplicar; senão, adiciona normalmente.
+      setTasks(prev => {
+        const idx = prev.findIndex(t => t.id === formatted.id);
+        if (idx !== -1) {
+          return prev.map((t, i) => (i === idx ? formatted : t));
+        }
+        return [formatted, ...prev];
+      });
 
       // Se a etapa inicial da tarefa (normalmente "Triagem") tem dono
       // configurado, avisa essa pessoa que chegou uma demanda nova.
