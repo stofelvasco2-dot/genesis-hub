@@ -344,7 +344,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: recipient.email, title, message, taskId }),
+        body: JSON.stringify({ to: recipient.email, title, message, taskId, recipientName: recipient.name }),
       }).catch(() => {
         // Falha de e-mail nunca deve travar o fluxo do usuário no app.
       });
