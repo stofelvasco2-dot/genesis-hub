@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 // usada em /api/invite.
 export async function POST(req: Request) {
   try {
-    const { to, title, message, taskId } = await req.json();
+    const { to, title, message, taskId, recipientName } = await req.json();
 
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL;
@@ -21,14 +21,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Destinatário (to) não informado." }, { status: 400 });
     }
 
+    // Se veio o ID da demanda, o botão leva direto pra ela (mesmo deep-link
+    // que o sino usa) em vez de só abrir o Kanban genérico.
+    const targetUrl = taskId ? `${appUrl}/kanban?task=${taskId}` : `${appUrl}/kanban`;
+    const firstName = recipientName ? String(recipientName).split(" ")[0] : null;
+
     const html = `
       <div style="font-family: -apple-system, Arial, sans-serif; max-width: 480px; margin: 0 auto; background:#0B1224; padding:32px; border-radius:16px; color:#E2E8F0;">
-        <p style="color:#7AA2FF; font-size:12px; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px;">Genesis Hub</p>
+        <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" style="height:32px; margin-bottom:20px;" />
+        <p style="color:#7AA2FF; font-size:12px; letter-spacing:1px; text-transform:uppercase; margin:0 0 8px;">Genesis Hub</p>
+        ${firstName ? `<p style="font-size:14px; color:#94A3B8; margin:0 0 4px;">Olá, ${firstName}</p>` : ""}
         <h2 style="color:#fff; font-size:20px; margin:0 0 16px;">${title}</h2>
         ${message ? `<p style="font-size:14px; color:#94A3B8; margin:0 0 24px; line-height:1.5;">${message}</p>` : ""}
-        <a href="${appUrl}/kanban" style="display:inline-block; background:linear-gradient(135deg,#5B8DFF,#2F6FEE); color:#fff; text-decoration:none; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600;">
-          Ver no Genesis Hub
+        <a href="${targetUrl}" style="display:inline-block; background:linear-gradient(135deg,#5B8DFF,#2F6FEE); color:#fff; text-decoration:none; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600;">
+          Ver demanda no Genesis Hub
         </a>
+        <p style="font-size:11px; color:#4B5A7A; margin:28px 0 0;">Você recebeu esse e-mail porque está envolvido(a) nessa demanda no Genesis Hub.</p>
       </div>
     `;
 
