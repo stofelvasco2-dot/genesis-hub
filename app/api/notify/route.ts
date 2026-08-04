@@ -26,19 +26,55 @@ export async function POST(req: Request) {
     const targetUrl = taskId ? `${appUrl}/kanban?task=${taskId}` : `${appUrl}/kanban`;
     const firstName = recipientName ? String(recipientName).split(" ")[0] : null;
 
-    const html = `
-      <div style="font-family: -apple-system, Arial, sans-serif; max-width: 480px; margin: 0 auto; background:#0B1224; padding:32px; border-radius:16px; color:#E2E8F0;">
-        <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" style="height:32px; margin-bottom:20px;" />
-        <p style="color:#7AA2FF; font-size:12px; letter-spacing:1px; text-transform:uppercase; margin:0 0 8px;">Genesis Hub</p>
-        ${firstName ? `<p style="font-size:14px; color:#94A3B8; margin:0 0 4px;">Olá, ${firstName}</p>` : ""}
-        <h2 style="color:#fff; font-size:20px; margin:0 0 16px;">${title}</h2>
-        ${message ? `<p style="font-size:14px; color:#94A3B8; margin:0 0 24px; line-height:1.5;">${message}</p>` : ""}
-        <a href="${targetUrl}" style="display:inline-block; background:linear-gradient(135deg,#5B8DFF,#2F6FEE); color:#fff; text-decoration:none; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600;">
-          Ver demanda no Genesis Hub
-        </a>
-        <p style="font-size:11px; color:#4B5A7A; margin:28px 0 0;">Você recebeu esse e-mail porque está envolvido(a) nessa demanda no Genesis Hub.</p>
-      </div>
-    `;
+    // E-mail escuro, com a MESMA paleta da tela de login (#0b1430, azul
+    // blue-600/blue-400). As duas metatags de color-scheme são essenciais:
+    // sem elas, o Gmail (principalmente no app) "acha" que precisa inverter
+    // as cores no modo escuro do celular, e faz isso pela metade — clareia
+    // o fundo mas não ajusta a logo/texto, ficando ilegível. Com elas, o
+    // Gmail entende que o e-mail já foi feito pra modo escuro e não mexe.
+    // A estrutura em <table> (em vez de <div>) é o padrão da indústria pra
+    // e-mail, porque clientes de e-mail (Gmail, Outlook, Apple Mail) cada
+    // um respeita um pedaço diferente do CSS — tabela com bgcolor é o que
+    // funciona de forma consistente em todos.
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="dark" />
+<meta name="supported-color-schemes" content="dark" />
+<title>${title}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#0b1430;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0b1430;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background-color:#111a3d; border:1px solid rgba(255,255,255,0.08); border-radius:16px;">
+          <tr>
+            <td style="padding:32px; font-family:Arial,Helvetica,sans-serif;">
+              <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" width="140" style="display:block; margin:0 0 24px; border:0;" />
+              <p style="color:#60A5FA; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; margin:0 0 10px;">Genesis Hub</p>
+              ${firstName ? `<p style="color:#93C5FD; font-size:14px; margin:0 0 6px;">Olá, ${firstName}</p>` : ""}
+              <h2 style="color:#ffffff; font-size:20px; margin:0 0 14px;">${title}</h2>
+              ${message ? `<p style="color:#BFDBFE; font-size:14px; line-height:1.6; margin:0 0 26px;">${message}</p>` : ""}
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:#2563EB; border-radius:8px;">
+                    <a href="${targetUrl}" style="display:inline-block; padding:13px 22px; font-size:14px; font-weight:600; color:#ffffff; text-decoration:none;">
+                      Ver demanda no Genesis Hub
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#5b6b99; font-size:11px; margin:28px 0 0;">Você recebeu esse e-mail porque está envolvido(a) nessa demanda no Genesis Hub.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
