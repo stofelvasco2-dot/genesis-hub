@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LOGO_URL } from "@/lib/branding";
 
 function FuturisticBackground() {
   return (
@@ -122,7 +123,7 @@ function InviteContent() {
 
       <div className="w-full max-w-md bg-white/[0.04] backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/10 relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-11 object-contain mb-5" />
+          <img src={LOGO_URL} alt="Genesis Hub" className="h-11 object-contain mb-5" />
           <div className="flex items-center gap-1.5 text-xs text-blue-300/70 uppercase tracking-widest mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             Convite recebido

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LOGO_URL } from "@/lib/branding";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -49,7 +50,7 @@ export default function LoginPage() {
       {/* Lado esquerdo — narrativa / marca */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 p-14 relative z-10">
         <div className="flex items-center gap-3">
-          <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-9 object-contain" />
+          <img src={LOGO_URL} alt="Genesis Hub" className="h-9 object-contain" />
           <span className="text-xs tracking-[0.3em] text-blue-300/70 uppercase">Marketing Ops</span>
         </div>
 
@@ -93,7 +94,7 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex justify-center mb-8">
-            <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-10 object-contain" />
+            <img src={LOGO_URL} alt="Genesis Hub" className="h-10 object-contain" />
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Bem-vindo de volta</h2>

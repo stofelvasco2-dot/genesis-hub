@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
 import { isToday, isPast, parseISO } from "date-fns";
 import { CheckCircle2, Clock, ListTodo, AlertCircle } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 export default function DashboardPage() {
   const { tasks, currentUser, users } = useStore();
@@ -261,24 +260,32 @@ export default function DashboardPage() {
         </div>
 
         {/* Summary Charts (Simplified Row) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-64 shrink-0">
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
             <h4 className="text-xs font-bold text-slate-400 uppercase mb-4 tracking-wider">Categorias mais solicitadas</h4>
-            <div className="flex-1 h-full w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)' }} />
-                  <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+              {chartData.length === 0 && (
+                <p className="text-sm text-slate-400">Nenhuma demanda ainda.</p>
+              )}
+              {[...chartData].sort((a, b) => b.total - a.total).map(c => {
+                const maxCat = Math.max(1, ...chartData.map(d => d.total));
+                return (
+                  <div key={c.name} className="flex items-center gap-3">
+                    <span className="text-xs text-slate-600 w-32 shrink-0 truncate" title={c.name}>{c.name}</span>
+                    <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full rounded-full bg-blue-500" style={{ width: `${(c.total / maxCat) * 100}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700 w-5 text-right shrink-0">{c.total}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
           
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
             <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">Performance (SLA)</h4>
-            <div className="flex items-center justify-between h-full">
-              <div className="relative w-24 h-24">
+            <div className="flex items-center justify-between flex-1">
+              <div className="relative w-24 h-24 shrink-0">
                  <svg viewBox="0 0 36 36" className="w-24 h-24">
                     <path className="stroke-current text-slate-100" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     <path className={`stroke-current ${slaPercentage >= 90 ? 'text-green-500' : slaPercentage >= 70 ? 'text-amber-500' : 'text-red-500'}`} strokeWidth="4" strokeDasharray={`${slaPercentage}, 100`} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -296,7 +303,7 @@ export default function DashboardPage() {
                  </div>
                  <div className="flex justify-between items-center border-t border-slate-100 pt-2">
                     <span className="text-[11px] font-medium text-slate-500">Gargalos Atuais</span>
-                    <span className="text-sm font-bold text-red-500 uppercase text-[10px]">{currentBottleneck}</span>
+                    <span className="text-sm font-bold text-red-500 uppercase text-[10px] truncate max-w-[100px]" title={currentBottleneck}>{currentBottleneck}</span>
                  </div>
               </div>
             </div>

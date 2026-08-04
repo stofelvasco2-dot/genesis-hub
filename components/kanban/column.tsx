@@ -11,6 +11,7 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
   let dotColor = "bg-slate-400";
+  if (column.id === "Atribuído, A Fazer") dotColor = "bg-cyan-500";
   if (column.id === "Em Produção") dotColor = "bg-blue-500";
   if (column.id === "Aprovado") dotColor = "bg-green-500";
   if (column.id === "Revisão Interna") dotColor = "bg-purple-500";

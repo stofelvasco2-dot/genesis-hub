@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { LOGO_URL } from "@/lib/branding";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -44,7 +45,7 @@ export default function ResetPasswordPage() {
     <div className="flex h-screen w-full items-center justify-center bg-slate-50">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
         <div className="flex flex-col items-center mb-8">
-          <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-12 object-contain mb-4" />
+          <img src={LOGO_URL} alt="Genesis Hub" className="h-12 object-contain mb-4" />
           <h1 className="text-2xl font-bold text-slate-800">Nova Senha</h1>
           <p className="text-sm text-slate-500 text-center">Digite sua nova senha para acessar o sistema.</p>
         </div>

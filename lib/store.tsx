@@ -103,7 +103,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       supabase.from('departments').select('name'),
       supabase.from('categories').select('name'),
       supabase.from('priorities').select('name'),
-      supabase.from('statuses').select('name'),
+      supabase.from('statuses').select('name').order('order_index'),
       supabase.from('roles').select('name'),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('stage_owners').select('*'),
@@ -344,7 +344,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: recipient.email, title, message, taskId }),
+        body: JSON.stringify({ to: recipient.email, title, message, taskId, recipientName: recipient.name }),
       }).catch(() => {
         // Falha de e-mail nunca deve travar o fluxo do usuário no app.
       });
@@ -460,6 +460,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     const currentTask = tasks.find(t => t.id === id);
     if (!currentTask) return;
+
+    // Regra de negócio: nenhuma demanda pode avançar pra frente de "Triagem"
+    // sem um responsável definido. Se a mudança pedida tenta mudar o status
+    // pra algo diferente de Triagem, e não há (nem vai haver, nessa mesma
+    // chamada) um responsável, bloqueia e avisa em vez de salvar.
+    const willHaveAssignee = updates.assigneeId !== undefined ? !!updates.assigneeId : !!currentTask.assigneeId;
+    if (
+      updates.status !== undefined &&
+      updates.status !== currentTask.status &&
+      updates.status !== "Triagem" &&
+      !willHaveAssignee
+    ) {
+      toast.error("Atribua um responsável antes de mover essa demanda para frente.");
+      return;
+    }
+
+    // Se a demanda está em Triagem e está ganhando responsável agora (e
+    // ninguém pediu explicitamente outro status na mesma chamada), avança
+    // ela sozinha pra "Atribuído, A Fazer" — sem precisar arrastar o card.
+    if (
+      currentTask.status === "Triagem" &&
+      updates.status === undefined &&
+      updates.assigneeId !== undefined &&
+      updates.assigneeId &&
+      !currentTask.assigneeId
+    ) {
+      updates = { ...updates, status: "Atribuído, A Fazer" as Status };
+    }
 
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;

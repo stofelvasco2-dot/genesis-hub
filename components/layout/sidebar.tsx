@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, KanbanSquare, ListTodo, Settings, Users, LogOut } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { LOGO_URL } from "@/lib/branding";
 
 const NAV_ITEMS = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -29,10 +30,10 @@ export function Sidebar({ isOpen, setIsOpen, isMobile }: { isOpen: boolean; setI
     )}>
       <div className={cn("p-4 border-b border-slate-800 flex items-center h-16", isOpen ? "justify-between" : "justify-center")}>
         <div className={cn("flex items-center gap-3", !isOpen && "hidden")}>
-          <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-8 object-contain" />
+          <img src={LOGO_URL} alt="Genesis Hub" className="h-8 object-contain" />
         </div>
         {!isOpen && (
-          <img src="https://i.ibb.co/zp9RSKP/logo-genesis.png" alt="Genesis Hub" className="h-8 w-8 object-cover rounded-lg" />
+          <img src={LOGO_URL} alt="Genesis Hub" className="h-8 w-8 object-cover rounded-lg" />
         )}
       </div>
 
