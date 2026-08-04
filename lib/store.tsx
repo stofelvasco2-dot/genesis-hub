@@ -549,33 +549,45 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Antes isso era if/senão-se/senão: quando status E responsável mudavam
+    // JUNTOS na mesma chamada (caso comum: atribuir alguém em Triagem avança
+    // o status sozinho), só o evento de status era gravado — o de "atribuída
+    // para fulano" era descartado. Agora os dois são checados e gravados
+    // de forma independente, cada mudança real vira sua própria linha no
+    // histórico.
+    const newTimelineEntries: TimelineEvent[] = [];
+
     if (updates.status && updates.status !== currentTask.status) {
-      await supabase.from('timeline_events').insert([{
-        task_id: id,
-        type: 'status_changed',
-        user_id: modifierId,
-        description: `Status alterado de ${currentTask.status} para ${updates.status}.`
-      }]);
-    } else if (updates.assigneeId !== undefined && updates.assigneeId !== currentTask.assigneeId) {
+      const description = `Status alterado de ${currentTask.status} para ${updates.status}.`;
+      const { data } = await supabase.from('timeline_events').insert([{
+        task_id: id, type: 'status_changed', user_id: modifierId, description,
+      }]).select().single();
+      if (data) newTimelineEntries.push({ id: data.id, userId: data.user_id, type: data.type, description: data.description, createdAt: data.created_at });
+    }
+
+    if (updates.assigneeId !== undefined && updates.assigneeId !== currentTask.assigneeId) {
       const newAssignee = users.find(u => u.id === updates.assigneeId)?.name || "Alguém";
-      await supabase.from('timeline_events').insert([{
-        task_id: id,
-        type: 'assigned',
-        user_id: modifierId,
-        description: updates.assigneeId ? `Atribuída para ${newAssignee}.` : `Responsável removido.`
-      }]);
-    } else {
-      await supabase.from('timeline_events').insert([{
-        task_id: id,
-        type: 'other',
-        user_id: modifierId,
-        description: `Tarefa atualizada.`
-      }]);
+      const description = updates.assigneeId ? `Atribuída para ${newAssignee}.` : `Responsável removido.`;
+      const { data } = await supabase.from('timeline_events').insert([{
+        task_id: id, type: 'assigned', user_id: modifierId, description,
+      }]).select().single();
+      if (data) newTimelineEntries.push({ id: data.id, userId: data.user_id, type: data.type, description: data.description, createdAt: data.created_at });
+    }
+
+    if (newTimelineEntries.length === 0) {
+      const { data } = await supabase.from('timeline_events').insert([{
+        task_id: id, type: 'other', user_id: modifierId, description: `Tarefa atualizada.`,
+      }]).select().single();
+      if (data) newTimelineEntries.push({ id: data.id, userId: data.user_id, type: data.type, description: data.description, createdAt: data.created_at });
     }
 
     // Atualização otimista: aplica a mudança localmente na hora, sem esperar
-    // nem recarregar TODAS as tabelas do banco. A tela nunca "pisca".
-    setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates, ...localExtras } : t)));
+    // nem recarregar TODAS as tabelas do banco. A tela nunca "pisca". Isso
+    // agora inclui os eventos de histórico novos, pra aparecerem sem
+    // precisar dar F5.
+    setTasks(prev => prev.map(t => (t.id === id
+      ? { ...t, ...updates, ...localExtras, timeline: [...t.timeline, ...newTimelineEntries] }
+      : t)));
 
     // Notifica quem virou responsável pela demanda (se não foi ele mesmo que se atribuiu).
     if (
