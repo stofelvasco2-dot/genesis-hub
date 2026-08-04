@@ -2,11 +2,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStore } from "@/lib/store";
-import { isToday, isPast, parseISO } from "date-fns";
-import { CheckCircle2, Clock, ListTodo, AlertCircle } from "lucide-react";
+import { isToday, isPast, parseISO, format, differenceInCalendarDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CheckCircle2, Clock, ListTodo, AlertCircle, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const { tasks, currentUser, users } = useStore();
+  const router = useRouter();
 
   const isGestorOrAdmin = currentUser?.role === "Admin" || currentUser?.role === "Gestor";
   
@@ -71,8 +74,16 @@ export default function DashboardPage() {
     slaPercentage = 100;
   }
 
+  // "Gargalo" aqui significa risco de prazo, não volume de trabalho — por
+  // isso conta só as tarefas ATRASADAS (não simplesmente pendentes) por
+  // categoria. Antes contava qualquer tarefa pendente, então a categoria
+  // com mais volume no geral (ex: Campanha) sempre "vencia" mesmo quando o
+  // atraso de verdade era em outra categoria (ex: Landing Page).
   const pendingTasks = displayTasks.filter(t => t.status !== "Aprovado");
-  const bottleneckCounts = pendingTasks.reduce((acc, task) => {
+  const delayedTasks = pendingTasks.filter(t =>
+    t.dueDate && isPast(parseISO(t.dueDate)) && !isToday(parseISO(t.dueDate))
+  );
+  const bottleneckCounts = delayedTasks.reduce((acc, task) => {
     if (task.category) {
        acc[task.category] = (acc[task.category] || 0) + 1;
     }
@@ -192,70 +203,58 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Kanban Snapshot */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[300px]">
-          {/* Column: A Fazer */}
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-600 uppercase flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-slate-400"></span> Triagem ({displayTasks.filter(t => t.status === "Triagem").length})
-              </h3>
+        {/* Demandas Atrasadas — lista de ação real, ordenada da mais crítica
+            pra menos. Substitui as 3 colunas que só repetiam o Kanban sem
+            nenhuma interação (arrastar, abrir, etc.) e ainda causavam
+            sobreposição visual com o card de baixo em telas menores. */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+          <div className="flex items-center justify-between px-5 pt-5 pb-3">
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500" /> Demandas Atrasadas
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">Prazo já vencido e ainda não aprovadas — ordenadas da mais urgente pra menos.</p>
             </div>
-            <div className="flex-1 bg-slate-100/50 rounded-xl p-3 space-y-3">
-              {displayTasks.filter(t => t.status === "Triagem").slice(0, 3).map(task => {
-                 return (
-                  <div key={task.id} className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700 uppercase">{task.priority}</span>
-                      <span className="text-[10px] text-slate-400">#{task.id.slice(0,4)}</span>
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{task.title}</h4>
-                  </div>
-                 )
-              })}
-            </div>
+            {delayedTasks.length > 0 && (
+              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-600 shrink-0">
+                {delayedTasks.length}
+              </span>
+            )}
           </div>
-
-          {/* Column: Em Andamento */}
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-600 uppercase flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span> Em Produção ({displayTasks.filter(t => t.status === "Em Produção").length})
-              </h3>
-            </div>
-            <div className="flex-1 bg-slate-100/50 rounded-xl p-3 space-y-3">
-              {displayTasks.filter(t => t.status === "Em Produção").slice(0, 3).map(task => {
-                 return (
-                  <div key={task.id} className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm ring-2 ring-blue-500/10">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-700 uppercase">{task.priority}</span>
-                      <span className="text-[10px] text-slate-400">#{task.id.slice(0,4)}</span>
+          <div className="px-5 pb-5 divide-y divide-slate-100">
+            {[...delayedTasks]
+              .sort((a, b) => parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime())
+              .slice(0, 8)
+              .map(task => {
+                const assignee = users.find(u => u.id === task.assigneeId);
+                const daysLate = Math.abs(differenceInCalendarDays(parseISO(task.dueDate), new Date()));
+                return (
+                  <button
+                    key={task.id}
+                    onClick={() => router.push(`/kanban?task=${task.id}`)}
+                    className="w-full flex items-center gap-3 py-3 first:pt-0 last:pb-0 text-left hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors"
+                  >
+                    <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-100 text-red-600 shrink-0 whitespace-nowrap">
+                      {daysLate} dia{daysLate !== 1 ? "s" : ""}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{task.title}</p>
+                      <p className="text-xs text-slate-400">
+                        {task.category} · venceu em {format(parseISO(task.dueDate), "dd/MM", { locale: ptBR })}
+                        {assignee ? ` · ${assignee.name}` : " · sem responsável"}
+                      </p>
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{task.title}</h4>
-                  </div>
-                 )
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase shrink-0">{task.status}</span>
+                    <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
+                  </button>
+                );
               })}
-            </div>
-          </div>
-
-          {/* Column: Finalizado */}
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-600 uppercase flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span> Aprovado ({displayTasks.filter(t => t.status === "Aprovado").length})
-              </h3>
-            </div>
-            <div className="flex-1 bg-slate-100/50 rounded-xl p-3 space-y-3">
-              {displayTasks.filter(t => t.status === "Aprovado").slice(0, 3).map(task => (
-                <div key={task.id} className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm opacity-75">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">{task.priority}</span>
-                    <span className="text-[10px] text-slate-400">#{task.id.slice(0,4)}</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-800 leading-tight mb-1">{task.title}</h4>
-                </div>
-              ))}
-            </div>
+            {delayedTasks.length === 0 && (
+              <p className="text-sm text-slate-400 text-center py-6 flex flex-col items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                Nenhuma demanda atrasada no momento.
+              </p>
+            )}
           </div>
         </div>
 
