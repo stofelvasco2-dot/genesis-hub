@@ -479,9 +479,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // Se a demanda está em Triagem e está ganhando responsável agora (e
     // ninguém pediu explicitamente outro status na mesma chamada), avança
     // ela sozinha pra "Atribuído, A Fazer" — sem precisar arrastar o card.
+    // Cobre tanto quem manda só {assigneeId} (patch parcial) quanto o modal
+    // de edição, que sempre reenvia o status atual junto (nesse caso,
+    // "sem mudança de status" significa updates.status === status atual,
+    // não necessariamente undefined).
     if (
       currentTask.status === "Triagem" &&
-      updates.status === undefined &&
+      (updates.status === undefined || updates.status === currentTask.status) &&
       updates.assigneeId !== undefined &&
       updates.assigneeId &&
       !currentTask.assigneeId
