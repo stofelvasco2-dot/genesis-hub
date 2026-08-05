@@ -11,10 +11,11 @@ interface SidebarContextValue {
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  // No mobile, o usuário controla (drawer que abre/fecha). No desktop, a
-  // barra lateral fica sempre fixa/aberta — sem nenhuma lógica de
-  // abrir/fechar automática, então não tem mais como "piscar".
+  // No mobile é uma gaveta que abre/fecha por cima do conteúdo.
+  // No desktop é um colapso: fica larga (w-64) ou só com ícones (w-16).
+  // Cada modo guarda seu próprio estado, pra não se misturarem.
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -26,11 +27,11 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
-  const isSidebarOpen = isMobile ? isMobileSidebarOpen : true;
+  const isSidebarOpen = isMobile ? isMobileSidebarOpen : isDesktopSidebarOpen;
 
   const setIsSidebarOpen = (val: boolean) => {
-    // No desktop a barra é sempre fixa: ignora qualquer tentativa de fechar.
     if (isMobile) setIsMobileSidebarOpen(val);
+    else setIsDesktopSidebarOpen(val);
   };
 
   return (

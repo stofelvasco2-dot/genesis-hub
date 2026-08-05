@@ -51,17 +51,6 @@ export default function CollaboratorDashboard() {
     });
   }, [myActiveTasks]);
 
-  // Demandas que essa pessoa solicitou (não necessariamente responsável),
-  // pra acompanhar o andamento do que ela pediu pra outros times.
-  const myRequests = useMemo(
-    () =>
-      tasks
-        .filter((t) => t.requesterId === currentUser?.id && t.status !== "Aprovado")
-        .sort((a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime())
-        .slice(0, 6),
-    [tasks, currentUser?.id]
-  );
-
   return (
     <div className="p-6 space-y-6 flex-1 overflow-y-auto flex flex-col">
       <div>
@@ -152,34 +141,6 @@ export default function CollaboratorDashboard() {
           )}
         </div>
       </div>
-
-      {/* O que você pediu */}
-      {myRequests.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
-          <div className="px-5 pt-5 pb-3">
-            <h4 className="text-sm font-bold text-slate-800">O Que Você Solicitou</h4>
-            <p className="text-xs text-slate-400 mt-0.5">Andamento das demandas que você abriu para outros times.</p>
-          </div>
-          <div className="px-5 pb-5 divide-y divide-slate-100">
-            {myRequests.map((task) => (
-              <button
-                key={task.id}
-                onClick={() => router.push(`/kanban?task=${task.id}`)}
-                className="w-full flex items-center gap-3 py-3 first:pt-0 last:pb-0 text-left hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{task.title}</p>
-                  <p className="text-xs text-slate-400">{task.category}</p>
-                </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shrink-0 ${statusBadgeStyle[task.status] || "bg-slate-100 text-slate-500"}`}>
-                  {task.status}
-                </span>
-                <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
