@@ -307,6 +307,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           });
         }
       )
+      // Comentários: insere no array de comments da tarefa certa, em tempo real.
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'comments' },
+        (payload) => {
+          const c = payload.new as any;
+          if (!c) return;
+          setTasks(prev => prev.map(t => {
+            if (t.id !== c.task_id) return t;
+            if (t.comments.some(existing => existing.id === c.id)) return t;
+            return {
+              ...t,
+              comments: [...t.comments, {
+                id: c.id, userId: c.user_id, text: c.text, createdAt: c.created_at,
+              }],
+            };
+          }));
+        }
+      )
+      // Timeline: insere o evento de histórico na tarefa certa, em tempo real.
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'timeline_events' },
+        (payload) => {
+          const e = payload.new as any;
+          if (!e) return;
+          setTasks(prev => prev.map(t => {
+            if (t.id !== e.task_id) return t;
+            if (t.timeline.some(existing => existing.id === e.id)) return t;
+            return {
+              ...t,
+              timeline: [...t.timeline, {
+                id: e.id, type: e.type, userId: e.user_id, description: e.description, createdAt: e.created_at,
+              }],
+            };
+          }));
+        }
+      )
       .subscribe();
 
     return () => {
