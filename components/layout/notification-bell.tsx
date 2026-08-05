@@ -26,7 +26,7 @@ export function NotificationBell() {
 
   return (
     <Popover>
-      <PopoverTrigger className="relative inline-flex items-center justify-center size-8 shrink-0 rounded-lg text-slate-500 hover:bg-muted hover:text-slate-700 transition-colors">
+      <PopoverTrigger className="relative inline-flex items-center justify-center size-8 shrink-0 rounded-lg text-slate-500 hover:bg-muted hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -35,32 +35,32 @@ export function NotificationBell() {
         )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-bold text-slate-800">Notificações</p>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Notificações</p>
           {unreadCount > 0 && (
             <button
               onClick={() => markAllNotificationsRead()}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center gap-1"
             >
               <CheckCheck className="w-3.5 h-3.5" /> Marcar todas como lidas
             </button>
           )}
         </div>
-        <div className="max-h-96 overflow-y-auto divide-y divide-slate-50">
+        <div className="max-h-96 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
           {notifications.length === 0 && (
-            <p className="text-sm text-slate-400 text-center py-10">Nenhuma notificação por aqui.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">Nenhuma notificação por aqui.</p>
           )}
           {notifications.map(n => (
             <button
               key={n.id}
               onClick={() => openNotification(n.id, n.read, n.taskId)}
-              className={`w-full text-left px-4 py-3 flex gap-3 hover:bg-slate-50 transition-colors ${!n.read ? "bg-blue-50/50" : ""}`}
+              className={`w-full text-left px-4 py-3 flex gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!n.read ? "bg-blue-50/50 dark:bg-blue-500/10" : ""}`}
             >
               <div className="mt-0.5 shrink-0">{typeIcon[n.type] || typeIcon.other}</div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm ${!n.read ? "font-semibold text-slate-800" : "text-slate-600"}`}>{n.title}</p>
-                {n.message && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>}
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className={`text-sm ${!n.read ? "font-semibold text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-400"}`}>{n.title}</p>
+                {n.message && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>}
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
                   {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: ptBR })}
                 </p>
               </div>

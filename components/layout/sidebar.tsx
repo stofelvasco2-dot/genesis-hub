@@ -25,7 +25,7 @@ export function Sidebar({ isOpen, setIsOpen, isMobile }: { isOpen: boolean; setI
 
   return (
     <aside className={cn(
-      "bg-slate-900 flex flex-col border-r border-slate-200 h-full overflow-hidden transition-all duration-300",
+      "bg-slate-900 flex flex-col border-r border-slate-800 h-full overflow-hidden transition-all duration-300",
       isOpen ? "w-64" : "w-16"
     )}>
       <div className={cn("p-4 border-b border-slate-800 flex items-center h-16", isOpen ? "justify-between" : "justify-center")}>

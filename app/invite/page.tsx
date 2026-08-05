@@ -121,7 +121,7 @@ function InviteContent() {
     <div className="min-h-screen w-full flex items-center justify-center bg-[#0b1430] text-white p-4 relative overflow-hidden">
       <FuturisticBackground />
 
-      <div className="w-full max-w-md bg-white/[0.04] backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/10 relative z-10">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900/[0.04] backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-white/10 relative z-10">
         <div className="flex flex-col items-center mb-8">
           <img src={LOGO_URL} alt="Genesis Hub" className="h-11 object-contain mb-5" />
           <div className="flex items-center gap-1.5 text-xs text-blue-300/70 uppercase tracking-widest mb-3">
@@ -152,7 +152,7 @@ function InviteContent() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-3 py-2.5 text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
+                className="w-full bg-white dark:bg-slate-900/5 border border-white/10 rounded-lg pl-10 pr-3 py-2.5 text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
               />
             </div>
           </div>
@@ -169,7 +169,7 @@ function InviteContent() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
+                className="w-full bg-white dark:bg-slate-900/5 border border-white/10 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
               />
               <button
                 type="button"

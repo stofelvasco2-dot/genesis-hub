@@ -3,6 +3,7 @@
 import { PlusCircle, Menu, PanelLeft } from "lucide-react";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -10,17 +11,18 @@ export function Header({ toggleSidebar, isSidebarOpen, isMobile }: { toggleSideb
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10 shrink-0">
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-10 shrink-0">
       <div className="flex items-center gap-4 flex-1 overflow-hidden">
         {toggleSidebar && (
-          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-slate-500 hover:text-slate-700 shrink-0">
+          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 shrink-0">
             <Menu className="w-5 h-5" />
           </Button>
         )}
-        <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight truncate">Gestão de Demandas</h1>
+        <h1 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight truncate">Gestão de Demandas</h1>
       </div>
       
       <div className="flex items-center gap-2 sm:gap-4 ml-4 shrink-0">
+        <ThemeToggle />
         <NotificationBell />
         <Button 
           onClick={() => setIsModalOpen(true)} 

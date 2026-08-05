@@ -169,22 +169,22 @@ export default function SettingsPage() {
   };
 
   const renderSection = (title: string, items: string[], newValue: string, setNewValue: (v: string) => void, table: string) => (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-      <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase">{title}</h3>
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 uppercase">{title}</h3>
       <div className="flex gap-2 mb-4">
         <Input value={newValue} onChange={e => setNewValue(e.target.value)} placeholder={`Novo ${title.toLowerCase()}`} className="h-9" />
         <Button onClick={() => handleAdd(table, newValue, setNewValue)} size="sm" className="bg-blue-600 hover:bg-blue-700 h-9 shrink-0"><Plus className="w-4 h-4 mr-1" /> Adicionar</Button>
       </div>
       <div className="space-y-2 max-h-48 overflow-y-auto">
         {items.map(item => (
-          <div key={item} className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-100">
-            <span className="text-sm font-medium text-slate-700">{item}</span>
-            <Button variant="ghost" size="icon" onClick={() => handleDelete(table, item)} className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50">
+          <div key={item} className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{item}</span>
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(table, item)} className="h-7 w-7 text-red-500 dark:text-red-400 hover:text-red-700 hover:bg-red-50">
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         ))}
-        {items.length === 0 && <p className="text-xs text-slate-400 italic">Nenhum item cadastrado.</p>}
+        {items.length === 0 && <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nenhum item cadastrado.</p>}
       </div>
     </div>
   );
@@ -193,15 +193,15 @@ export default function SettingsPage() {
     <>
       <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
-          <p className="text-sm text-slate-500">Cadastre colaboradores e gerencie os menus do sistema.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Configurações</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Cadastre colaboradores e gerencie os menus do sistema.</p>
         </div>
 
         {/* Cadastro de Colaborador */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Cadastrar Colaborador</h2>
-            <p className="text-sm text-slate-500 mb-4">Preencha os dados para gerar um link de convite exclusivo.</p>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Cadastrar Colaborador</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Preencha os dados para gerar um link de convite exclusivo.</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
@@ -260,13 +260,13 @@ export default function SettingsPage() {
           </div>
 
           {generatedLink && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 rounded-lg flex flex-col gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
               <p className="text-sm font-medium text-blue-900">
                 Link gerado! Envie este link para o colaborador.
               </p>
               <div className="flex gap-2">
-                <Input value={generatedLink} readOnly className="bg-white border-blue-200 focus-visible:ring-blue-500" />
-                <Button onClick={copyLink} variant="outline" className="bg-white border-blue-200 hover:bg-blue-50 text-blue-700 shrink-0">
+                <Input value={generatedLink} readOnly className="bg-white dark:bg-slate-900 border-blue-200 focus-visible:ring-blue-500" />
+                <Button onClick={copyLink} variant="outline" className="bg-white dark:bg-slate-900 border-blue-200 hover:bg-blue-50 text-blue-700 dark:text-blue-400 shrink-0">
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
@@ -275,46 +275,46 @@ export default function SettingsPage() {
         </div>
 
         {/* Colaboradores Cadastrados */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <UsersIcon className="w-4 h-4 text-slate-500" />
-            <h2 className="text-lg font-bold text-slate-800">Colaboradores Cadastrados</h2>
+            <UsersIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Colaboradores Cadastrados</h2>
           </div>
-          <p className="text-sm text-slate-500 mb-4">Edite nome, função, tipo de usuário e setor de quem já tem conta no sistema.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Edite nome, função, tipo de usuário e setor de quem já tem conta no sistema.</p>
 
           <div className="space-y-2">
             {users.map(user => (
-              <div key={user.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+              <div key={user.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
                 <div className="flex-1 min-w-[140px]">
-                  <p className="text-sm font-semibold text-slate-800">{user.name}</p>
-                  <p className="text-xs text-slate-400">{user.email}</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{user.name}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{user.email}</p>
                 </div>
-                <span className="text-xs text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded min-w-[100px] text-center">
+                <span className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded min-w-[100px] text-center">
                   {user.tipo_usuario || "Sem função"}
                 </span>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${
-                  user.role === "Admin" ? "bg-violet-100 text-violet-700" :
-                  user.role === "Gestor" ? "bg-blue-100 text-blue-700" :
-                  "bg-slate-200 text-slate-600"
+                  user.role === "Admin" ? "bg-violet-100 dark:bg-violet-500/15 text-violet-700" :
+                  user.role === "Gestor" ? "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400" :
+                  "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                 }`}>
                   {user.role}
                 </span>
-                <span className="text-xs text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded min-w-[100px] text-center">
+                <span className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded min-w-[100px] text-center">
                   {(user.department as string) || "Sem setor"}
                 </span>
-                <Button variant="ghost" size="icon" onClick={() => openEditUser(user)} className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                <Button variant="ghost" size="icon" onClick={() => openEditUser(user)} className="h-8 w-8 text-slate-500 dark:text-slate-400 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                   <Pencil className="w-4 h-4" />
                 </Button>
               </div>
             ))}
-            {users.length === 0 && <p className="text-sm text-slate-400 italic">Nenhum colaborador cadastrado ainda.</p>}
+            {users.length === 0 && <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nenhum colaborador cadastrado ainda.</p>}
           </div>
         </div>
 
         {/* Donos de Etapa */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-800 mb-1">Donos de Etapa</h2>
-          <p className="text-sm text-slate-500 mb-4">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">Donos de Etapa</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
             Escolha quem é avisado (no sino e por e-mail) toda vez que uma demanda chega numa etapa específica do Kanban — independente de quem é o responsável pela tarefa.
           </p>
 
@@ -344,15 +344,15 @@ export default function SettingsPage() {
 
           <div className="space-y-3">
             {statuses.filter(s => stageOwners.some(so => so.status === s)).map(status => (
-              <div key={status} className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-slate-50 border border-slate-100">
-                <span className="text-xs font-bold text-slate-500 uppercase w-40 shrink-0">{status}</span>
+              <div key={status} className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase w-40 shrink-0">{status}</span>
                 <div className="flex flex-wrap gap-2">
                   {stageOwners.filter(so => so.status === status).map(so => {
                     const owner = users.find(u => u.id === so.userId);
                     return (
-                      <span key={so.id} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-xs font-medium text-slate-700 px-2.5 py-1 rounded-full">
+                      <span key={so.id} className="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-full">
                         {owner?.name || "Usuário removido"}
-                        <button onClick={() => removeStageOwner(so.id)} className="text-slate-400 hover:text-red-500">
+                        <button onClick={() => removeStageOwner(so.id)} className="text-slate-400 dark:text-slate-500 hover:text-red-500">
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </span>
@@ -362,15 +362,15 @@ export default function SettingsPage() {
               </div>
             ))}
             {stageOwners.length === 0 && (
-              <p className="text-sm text-slate-400 italic">Nenhuma etapa com dono configurado ainda — ninguém recebe notificação automática por etapa.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nenhuma etapa com dono configurado ainda — ninguém recebe notificação automática por etapa.</p>
             )}
           </div>
         </div>
 
         {/* Opções do Sistema */}
         <div>
-          <h2 className="text-lg font-bold text-slate-800 mb-1">Menus do Sistema</h2>
-          <p className="text-sm text-slate-500 mb-4">Adicione ou remova opções disponíveis ao abrir uma nova demanda.</p>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">Menus do Sistema</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Adicione ou remova opções disponíveis ao abrir uma nova demanda.</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {renderSection("Setor Solicitante", departments, newDept, setNewDept, "departments")}

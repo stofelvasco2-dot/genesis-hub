@@ -82,8 +82,8 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white border-none rounded-2xl shadow-2xl [&>button]:hidden">
-        <DialogHeader className="px-6 py-4 border-b border-slate-100 flex flex-row items-center justify-between sticky top-0 bg-white z-10">
+      <DialogContent className="sm:max-w-[700px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white dark:bg-slate-900 border-none rounded-2xl shadow-2xl [&>button]:hidden">
+        <DialogHeader className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10">
           <DialogTitle className="text-xl font-bold">Nova Solicitação</DialogTitle>
           <Button type="button" variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-8 w-8 rounded-full">
             <X className="w-4 h-4" />
@@ -94,9 +94,9 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
           <form id="task-form" onSubmit={handleSubmit} className="space-y-6 pb-8">
             <div className="space-y-4">
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <div className="space-y-2">
-                  <Label htmlFor="requesterName" className="text-xs font-semibold text-slate-600">Nome do Solicitante *</Label>
+                  <Label htmlFor="requesterName" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Nome do Solicitante *</Label>
                   <Input 
                     id="requesterName"
                     value={requesterName} 
@@ -105,7 +105,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-600">Setor Solicitante *</Label>
+                  <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Setor Solicitante *</Label>
                   <Select value={department} onValueChange={(val) => val && setDepartment(val as Department)}>
                     <SelectTrigger className="h-10"><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
                     <SelectContent>
@@ -116,7 +116,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-xs font-semibold text-slate-600">Título da Solicitação *</Label>
+                <Label htmlFor="title" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Título da Solicitação *</Label>
                 <Input 
                   id="title"
                   value={title} 
@@ -128,7 +128,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-600">Categoria *</Label>
+                  <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Categoria *</Label>
                   <Select value={category} onValueChange={(val) => val && setCategory(val as Category)}>
                     <SelectTrigger className="h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
@@ -138,7 +138,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-600">Prioridade *</Label>
+                  <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Prioridade *</Label>
                   <Select value={priority} onValueChange={(val) => val && setPriority(val as Priority)}>
                     <SelectTrigger className="h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
@@ -149,11 +149,11 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
               </div>
 
               <div className="space-y-2 flex flex-col">
-                <Label className="text-xs font-semibold text-slate-600">Prazo Solicitado *</Label>
+                <Label className="text-xs font-semibold text-slate-600 dark:text-slate-300">Prazo Solicitado *</Label>
                 <Popover>
                   <PopoverTrigger
                     className={cn(
-                      "flex h-10 w-full items-center justify-start rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background hover:bg-slate-50",
+                      "flex h-10 w-full items-center justify-start rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background hover:bg-slate-50 dark:hover:bg-slate-800",
                       !dueDate && "text-muted-foreground"
                     )}
                   >
@@ -171,7 +171,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-xs font-semibold text-slate-600">Descrição Completa *</Label>
+                <Label htmlFor="description" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Descrição Completa *</Label>
                 <Textarea 
                   id="description"
                   value={description} 
@@ -182,7 +182,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="referenceLinks" className="text-xs font-semibold text-slate-600">Links de Referência</Label>
+                <Label htmlFor="referenceLinks" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Links de Referência</Label>
                 <Textarea 
                   id="referenceLinks"
                   value={referenceLinks} 
@@ -193,7 +193,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes" className="text-xs font-semibold text-slate-600">Observações Extras</Label>
+                <Label htmlFor="notes" className="text-xs font-semibold text-slate-600 dark:text-slate-300">Observações Extras</Label>
                 <Textarea 
                   id="notes"
                   value={notes} 
@@ -207,7 +207,7 @@ export function TaskFormModal({ open, onOpenChange }: TaskFormModalProps) {
           </form>
         </div>
         
-        <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-950">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

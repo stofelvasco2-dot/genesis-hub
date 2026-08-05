@@ -34,12 +34,12 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+    <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-800">
         <div className="flex flex-col items-center mb-8">
           <img src={LOGO_URL} alt="Genesis Hub" className="h-12 object-contain mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800">Recuperar Senha</h1>
-          <p className="text-sm text-slate-500 text-center">Informe seu e-mail para receber um link de recuperação.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Recuperar Senha</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center">Informe seu e-mail para receber um link de recuperação.</p>
         </div>
         <form onSubmit={handleReset} className="space-y-4">
           <div className="space-y-2">
@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
             {loading ? "Enviando..." : "Enviar Link"}
           </Button>
           <div className="text-center mt-4">
-            <a href="/login" className="text-sm text-blue-600 hover:underline">Voltar para o Login</a>
+            <a href="/login" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">Voltar para o Login</a>
           </div>
         </form>
       </div>

@@ -112,7 +112,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-3 py-2.5 text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
+                  className="w-full bg-white dark:bg-slate-900/5 border border-white/10 rounded-lg pl-10 pr-3 py-2.5 text-sm text-white placeholder:text-blue-300/30 outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
                 />
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
+                  className="w-full bg-white dark:bg-slate-900/5 border border-white/10 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white outline-none focus:border-blue-400/60 focus:bg-white/[0.07] transition-colors"
                 />
                 <button
                   type="button"
@@ -159,9 +159,9 @@ export default function LoginPage() {
           </form>
 
           <div className="flex items-center gap-3 my-7">
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-white dark:bg-slate-900/10" />
             <span className="text-[10px] uppercase tracking-widest text-blue-300/30">acesso restrito</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-white dark:bg-slate-900/10" />
           </div>
 
           <p className="text-center text-xs text-blue-200/40">

@@ -42,12 +42,12 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-slate-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+    <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-800">
         <div className="flex flex-col items-center mb-8">
           <img src={LOGO_URL} alt="Genesis Hub" className="h-12 object-contain mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800">Nova Senha</h1>
-          <p className="text-sm text-slate-500 text-center">Digite sua nova senha para acessar o sistema.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Nova Senha</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 text-center">Digite sua nova senha para acessar o sistema.</p>
         </div>
         <form onSubmit={handleUpdate} className="space-y-4">
           <div className="space-y-2">
