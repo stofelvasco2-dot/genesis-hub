@@ -373,7 +373,7 @@ export default function AdminDashboard() {
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e2e8f0" }}
                   labelFormatter={(label) => `Semana de ${label}`}
-                  formatter={(value: number) => [`${value}`, "Entregues"]}
+                  formatter={(value) => [`${value}`, "Entregues"]}
                 />
                 <Line type="monotone" dataKey="entregues" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
