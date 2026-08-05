@@ -1,0 +1,185 @@
+"use client";
+
+import { useMemo } from "react";
+import { useStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import { format, parseISO, differenceInCalendarDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, Clock, ListTodo } from "lucide-react";
+import {
+  isTaskDelayed,
+  isTaskDueToday,
+  isTaskDueThisWeek,
+  priorityBadgeStyle,
+} from "@/lib/dashboard-utils";
+
+const statusBadgeStyle: Record<string, string> = {
+  Triagem: "bg-slate-100 text-slate-600",
+  "Em Produção": "bg-blue-100 text-blue-700",
+  "Revisão Interna": "bg-indigo-100 text-indigo-700",
+  "Ajustes Solicitados": "bg-amber-100 text-amber-700",
+  "Aguardando Aprovação": "bg-purple-100 text-purple-700",
+  Aprovado: "bg-emerald-100 text-emerald-700",
+};
+
+export default function CollaboratorDashboard() {
+  const { tasks, currentUser } = useStore();
+  const router = useRouter();
+
+  // Só as tarefas onde a pessoa é responsável (a fila de trabalho dela) —
+  // atualiza sozinho em tempo real, sem precisar de F5.
+  const myTasks = useMemo(
+    () => tasks.filter((t) => t.assigneeId === currentUser?.id),
+    [tasks, currentUser?.id]
+  );
+  const myActiveTasks = useMemo(() => myTasks.filter((t) => t.status !== "Aprovado"), [myTasks]);
+  const myDelayed = useMemo(() => myActiveTasks.filter(isTaskDelayed), [myActiveTasks]);
+  const myDueToday = useMemo(() => myActiveTasks.filter(isTaskDueToday), [myActiveTasks]);
+  const myDueThisWeek = useMemo(() => myActiveTasks.filter(isTaskDueThisWeek), [myActiveTasks]);
+
+  // Fila de trabalho ordenada: atrasadas primeiro, depois por prazo mais
+  // próximo, sem prazo por último.
+  const workQueue = useMemo(() => {
+    return [...myActiveTasks].sort((a, b) => {
+      const aLate = isTaskDelayed(a) ? 0 : 1;
+      const bLate = isTaskDelayed(b) ? 0 : 1;
+      if (aLate !== bLate) return aLate - bLate;
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return parseISO(a.dueDate).getTime() - parseISO(b.dueDate).getTime();
+    });
+  }, [myActiveTasks]);
+
+  // Demandas que essa pessoa solicitou (não necessariamente responsável),
+  // pra acompanhar o andamento do que ela pediu pra outros times.
+  const myRequests = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.requesterId === currentUser?.id && t.status !== "Aprovado")
+        .sort((a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime())
+        .slice(0, 6),
+    [tasks, currentUser?.id]
+  );
+
+  return (
+    <div className="p-6 space-y-6 flex-1 overflow-y-auto flex flex-col">
+      <div>
+        <h2 className="text-lg font-bold text-slate-800">Olá, {currentUser?.name?.split(" ")[0] || "por aqui"} 👋</h2>
+        <p className="text-sm text-slate-400">Aqui está o que precisa da sua atenção agora.</p>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-slate-400">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase">Pendentes</p>
+            <ListTodo className="w-4 h-4 text-slate-400" />
+          </div>
+          <p className="text-2xl font-bold text-slate-900">{myActiveTasks.length}</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-red-500">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase">Atrasadas</p>
+            <AlertCircle className="w-4 h-4 text-red-400" />
+          </div>
+          <p className="text-2xl font-bold text-red-600">{myDelayed.length}</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-500">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase">Vencem Hoje</p>
+            <Clock className="w-4 h-4 text-amber-400" />
+          </div>
+          <p className="text-2xl font-bold text-amber-600">{myDueToday.length}</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] font-semibold text-slate-500 uppercase">Essa Semana</p>
+            <CalendarClock className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-2xl font-bold text-blue-600">{myDueThisWeek.length}</p>
+        </div>
+      </div>
+
+      {/* Fila de trabalho */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+        <div className="px-5 pt-5 pb-3">
+          <h4 className="text-sm font-bold text-slate-800">Sua Fila de Trabalho</h4>
+          <p className="text-xs text-slate-400 mt-0.5">Atrasadas primeiro, depois por prazo mais próximo.</p>
+        </div>
+        <div className="px-5 pb-5 divide-y divide-slate-100">
+          {workQueue.slice(0, 12).map((task) => {
+            const delayed = isTaskDelayed(task);
+            const dueToday = isTaskDueToday(task);
+            return (
+              <button
+                key={task.id}
+                onClick={() => router.push(`/kanban?task=${task.id}`)}
+                className="w-full flex items-center gap-3 py-3 first:pt-0 last:pb-0 text-left hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors"
+              >
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${priorityBadgeStyle[task.priority] || "bg-slate-100 text-slate-600"}`}>
+                  {task.priority}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{task.title}</p>
+                  <p className="text-xs text-slate-400">
+                    {task.category}
+                    {task.dueDate ? ` · prazo ${format(parseISO(task.dueDate), "dd/MM", { locale: ptBR })}` : " · sem prazo"}
+                  </p>
+                </div>
+                {delayed && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0 whitespace-nowrap">
+                    {Math.abs(differenceInCalendarDays(parseISO(task.dueDate), new Date()))}d atraso
+                  </span>
+                )}
+                {!delayed && dueToday && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0 whitespace-nowrap">
+                    Hoje
+                  </span>
+                )}
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shrink-0 ${statusBadgeStyle[task.status] || "bg-slate-100 text-slate-500"}`}>
+                  {task.status}
+                </span>
+                <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
+              </button>
+            );
+          })}
+          {workQueue.length === 0 && (
+            <p className="text-sm text-slate-400 text-center py-8 flex flex-col items-center gap-2">
+              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+              Nenhuma demanda pendente com você. 🎉
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* O que você pediu */}
+      {myRequests.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+          <div className="px-5 pt-5 pb-3">
+            <h4 className="text-sm font-bold text-slate-800">O Que Você Solicitou</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Andamento das demandas que você abriu para outros times.</p>
+          </div>
+          <div className="px-5 pb-5 divide-y divide-slate-100">
+            {myRequests.map((task) => (
+              <button
+                key={task.id}
+                onClick={() => router.push(`/kanban?task=${task.id}`)}
+                className="w-full flex items-center gap-3 py-3 first:pt-0 last:pb-0 text-left hover:bg-slate-50 -mx-2 px-2 rounded-lg transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{task.title}</p>
+                  <p className="text-xs text-slate-400">{task.category}</p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shrink-0 ${statusBadgeStyle[task.status] || "bg-slate-100 text-slate-500"}`}>
+                  {task.status}
+                </span>
+                <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
