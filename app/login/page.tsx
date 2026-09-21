@@ -22,13 +22,32 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error("Erro ao fazer login: " + error.message);
-    } else {
-      toast.success("Login efetuado com sucesso!");
-      router.push("/");
+      setLoading(false);
+      return;
     }
+
+    // Antes de declarar sucesso, confere se o usuário não foi inativado —
+    // senão a tela chegava a mostrar "Login efetuado com sucesso!" e navegar
+    // pro app por uma fração de segundo, antes do StoreProvider derrubar a
+    // sessão. Checando aqui, o usuário inativo nunca sai da tela de login.
+    const { data: profile } = await supabase
+      .from("users")
+      .select("active")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (profile?.active === false) {
+      await supabase.auth.signOut();
+      toast.error("Usuário sem permissão para acessar o sistema. Fale com o administrador.");
+      setLoading(false);
+      return;
+    }
+
+    toast.success("Login efetuado com sucesso!");
+    router.push("/");
     setLoading(false);
   };
 

@@ -170,7 +170,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const resolvedUser = await resolveCurrentUser(session);
         if (resolvedUser && resolvedUser.active === false) {
-          toast.error("Sua conta foi desativada. Fale com o administrador do sistema.");
+          toast.error("Usuário sem permissão para acessar o sistema. Fale com o administrador.");
           await supabase!.auth.signOut();
           setIsLoaded(true);
           routerRef.current.push('/login');
@@ -201,7 +201,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
           const resolvedUser = await resolveCurrentUser(session);
           if (resolvedUser && resolvedUser.active === false) {
-            toast.error("Sua conta foi desativada. Fale com o administrador do sistema.");
+            toast.error("Usuário sem permissão para acessar o sistema. Fale com o administrador.");
             await supabase!.auth.signOut();
             return;
           }

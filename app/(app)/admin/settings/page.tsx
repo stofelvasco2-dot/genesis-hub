@@ -44,6 +44,7 @@ export default function SettingsPage() {
   const [editDept, setEditDept] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+  const [userToToggle, setUserToToggle] = useState<User | null>(null);
 
   const fetchData = async () => {
     if (!supabase) return;
@@ -139,20 +140,17 @@ export default function SettingsPage() {
     await refreshTasks();
   };
 
-  const toggleUserActive = async (user: User) => {
-    if (!supabase) return;
-    const nextActive = user.active === false;
-    const message = nextActive
-      ? `Reativar ${user.name}? Ele volta a conseguir logar e a contar no dashboard.`
-      : `Inativar ${user.name}? Ele deixa de conseguir logar e some do dashboard, mas as demandas dele continuam no histórico normalmente.`;
-    if (!window.confirm(message)) return;
+  const confirmToggleActive = async () => {
+    if (!supabase || !userToToggle) return;
+    const nextActive = userToToggle.active === false;
 
-    setTogglingUserId(user.id);
+    setTogglingUserId(userToToggle.id);
     const { error } = await supabase
       .from("users")
       .update({ active: nextActive })
-      .eq("id", user.id);
+      .eq("id", userToToggle.id);
     setTogglingUserId(null);
+    setUserToToggle(null);
 
     if (error) {
       toast.error("Erro ao atualizar colaborador: " + error.message);
@@ -340,7 +338,7 @@ export default function SettingsPage() {
                     variant="ghost"
                     size="icon"
                     disabled={togglingUserId === user.id}
-                    onClick={() => toggleUserActive(user)}
+                    onClick={() => setUserToToggle(user)}
                     title={isInactive ? "Reativar colaborador" : "Inativar colaborador"}
                     className={`h-8 w-8 shrink-0 ${isInactive ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-red-500 dark:text-red-400 hover:text-red-700 hover:bg-red-50"}`}
                   >
@@ -469,6 +467,41 @@ export default function SettingsPage() {
                 {savingEdit ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmação: inativar/reativar colaborador */}
+      <Dialog open={!!userToToggle} onOpenChange={(open) => !open && setUserToToggle(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <div className={`w-11 h-11 rounded-full flex items-center justify-center mb-2 ${userToToggle?.active === false ? "bg-emerald-100 dark:bg-emerald-500/15" : "bg-red-100 dark:bg-red-500/15"}`}>
+              {userToToggle?.active === false ? (
+                <UserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <UserX className="w-5 h-5 text-red-600 dark:text-red-400" />
+              )}
+            </div>
+            <DialogTitle>
+              {userToToggle?.active === false ? "Reativar" : "Inativar"} {userToToggle?.name}?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-500 dark:text-slate-400 -mt-2">
+            {userToToggle?.active === false
+              ? "Ele volta a conseguir fazer login e a contar na carga de trabalho do dashboard."
+              : "Ele deixa de conseguir fazer login e some do dashboard e das listas de responsável/dono de etapa. As demandas em que ele já aparece continuam no histórico normalmente."}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setUserToToggle(null)}>Cancelar</Button>
+            <Button
+              onClick={confirmToggleActive}
+              disabled={togglingUserId === userToToggle?.id}
+              className={userToToggle?.active === false ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}
+            >
+              {togglingUserId === userToToggle?.id
+                ? "Salvando..."
+                : userToToggle?.active === false ? "Reativar" : "Inativar"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
