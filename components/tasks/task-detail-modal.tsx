@@ -172,9 +172,11 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                       <SelectTrigger className="h-8 text-xs font-semibold bg-slate-50 dark:bg-slate-950"><SelectValue>{currentTask.assigneeId ? users.find(u => u.id === currentTask.assigneeId)?.name : "Sem responsável"}</SelectValue></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="unassigned" className="text-xs">Sem responsável</SelectItem>
-                        {users.map(u => (
-                          <SelectItem key={u.id} value={u.id} className="text-xs">{u.name}</SelectItem>
-                        ))}
+                        {users
+                          .filter(u => u.active !== false || u.id === currentTask.assigneeId)
+                          .map(u => (
+                            <SelectItem key={u.id} value={u.id} className="text-xs">{u.name}{u.active === false ? " (inativo)" : ""}</SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   ) : (

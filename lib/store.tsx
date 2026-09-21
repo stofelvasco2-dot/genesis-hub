@@ -169,6 +169,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       
       if (session?.user) {
         const resolvedUser = await resolveCurrentUser(session);
+        if (resolvedUser && resolvedUser.active === false) {
+          toast.error("Sua conta foi desativada. Fale com o administrador do sistema.");
+          await supabase!.auth.signOut();
+          setIsLoaded(true);
+          routerRef.current.push('/login');
+          return;
+        }
         if (resolvedUser) {
           setCurrentUser(resolvedUser);
         } else {
@@ -193,6 +200,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           if (currentUserIdRef.current === session.user.id) return;
 
           const resolvedUser = await resolveCurrentUser(session);
+          if (resolvedUser && resolvedUser.active === false) {
+            toast.error("Sua conta foi desativada. Fale com o administrador do sistema.");
+            await supabase!.auth.signOut();
+            return;
+          }
           if (resolvedUser) {
             setCurrentUser(resolvedUser);
           } else {

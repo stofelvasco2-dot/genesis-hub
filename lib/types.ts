@@ -10,6 +10,7 @@ export type User = {
   avatar?: string;
   email?: string;
   department?: Department | string;
+  active?: boolean;
 };
 
 export type Category = string;

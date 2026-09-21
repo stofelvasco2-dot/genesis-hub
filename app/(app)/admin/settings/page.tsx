@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Trash2, Plus, Link as LinkIcon, Copy, Check, Pencil, Users as UsersIcon } from "lucide-react";
+import { Trash2, Plus, Link as LinkIcon, Copy, Check, Pencil, Users as UsersIcon, UserX, UserCheck } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { User } from "@/lib/types";
 
@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [editType, setEditType] = useState(""); // Tipo de Usuário -> coluna role
   const [editDept, setEditDept] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!supabase) return;
@@ -135,6 +136,29 @@ export default function SettingsPage() {
     }
     toast.success("Colaborador atualizado com sucesso!");
     setEditingUser(null);
+    await refreshTasks();
+  };
+
+  const toggleUserActive = async (user: User) => {
+    if (!supabase) return;
+    const nextActive = user.active === false;
+    const message = nextActive
+      ? `Reativar ${user.name}? Ele volta a conseguir logar e a contar no dashboard.`
+      : `Inativar ${user.name}? Ele deixa de conseguir logar e some do dashboard, mas as demandas dele continuam no histórico normalmente.`;
+    if (!window.confirm(message)) return;
+
+    setTogglingUserId(user.id);
+    const { error } = await supabase
+      .from("users")
+      .update({ active: nextActive })
+      .eq("id", user.id);
+    setTogglingUserId(null);
+
+    if (error) {
+      toast.error("Erro ao atualizar colaborador: " + error.message);
+      return;
+    }
+    toast.success(nextActive ? "Colaborador reativado." : "Colaborador inativado.");
     await refreshTasks();
   };
 
@@ -283,30 +307,48 @@ export default function SettingsPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Edite nome, função, tipo de usuário e setor de quem já tem conta no sistema.</p>
 
           <div className="space-y-2">
-            {users.map(user => (
-              <div key={user.id} className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
-                <div className="flex-1 min-w-[140px]">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{user.name}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">{user.email}</p>
+            {users.map(user => {
+              const isInactive = user.active === false;
+              return (
+                <div key={user.id} className={`flex flex-wrap items-center gap-3 p-3 rounded-lg border ${isInactive ? "bg-slate-100/70 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 opacity-60" : "bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800"}`}>
+                  <div className="flex-1 min-w-[140px]">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{user.name}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{user.email}</p>
+                  </div>
+                  {isInactive && (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400">
+                      Inativo
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded min-w-[100px] text-center">
+                    {user.tipo_usuario || "Sem função"}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${
+                    user.role === "Admin" ? "bg-violet-100 dark:bg-violet-500/15 text-violet-700" :
+                    user.role === "Gestor" ? "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400" :
+                    "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                  }`}>
+                    {user.role}
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded min-w-[100px] text-center">
+                    {(user.department as string) || "Sem setor"}
+                  </span>
+                  <Button variant="ghost" size="icon" onClick={() => openEditUser(user)} className="h-8 w-8 text-slate-500 dark:text-slate-400 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={togglingUserId === user.id}
+                    onClick={() => toggleUserActive(user)}
+                    title={isInactive ? "Reativar colaborador" : "Inativar colaborador"}
+                    className={`h-8 w-8 shrink-0 ${isInactive ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-red-500 dark:text-red-400 hover:text-red-700 hover:bg-red-50"}`}
+                  >
+                    {isInactive ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                  </Button>
                 </div>
-                <span className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded min-w-[100px] text-center">
-                  {user.tipo_usuario || "Sem função"}
-                </span>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${
-                  user.role === "Admin" ? "bg-violet-100 dark:bg-violet-500/15 text-violet-700" :
-                  user.role === "Gestor" ? "bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400" :
-                  "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                }`}>
-                  {user.role}
-                </span>
-                <span className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded min-w-[100px] text-center">
-                  {(user.department as string) || "Sem setor"}
-                </span>
-                <Button variant="ghost" size="icon" onClick={() => openEditUser(user)} className="h-8 w-8 text-slate-500 dark:text-slate-400 hover:text-blue-600 hover:bg-blue-50 shrink-0">
-                  <Pencil className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
             {users.length === 0 && <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nenhum colaborador cadastrado ainda.</p>}
           </div>
         </div>
@@ -333,7 +375,7 @@ export default function SettingsPage() {
               <Select value={ownerUserId} onValueChange={(value) => setOwnerUserId(value ?? "")}>
                 <SelectTrigger><SelectValue>{ownerUserId ? users.find(u => u.id === ownerUserId)?.name : "Selecione a pessoa"}</SelectValue></SelectTrigger>
                 <SelectContent>
-                  {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  {users.filter(u => u.active !== false).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

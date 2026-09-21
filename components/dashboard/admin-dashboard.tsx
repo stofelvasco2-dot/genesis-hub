@@ -91,6 +91,7 @@ export default function AdminDashboard() {
   // ser responsáveis por demandas).
   const workload = useMemo(() => {
     return users
+      .filter((u) => u.active !== false)
       .map((u) => {
         const assigned = activeTasks.filter((t) => t.assigneeId === u.id);
         const delayedCount = assigned.filter(isTaskDelayed).length;
