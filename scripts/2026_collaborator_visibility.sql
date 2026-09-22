@@ -1,4 +1,13 @@
 -- ============================================================================
+-- ⚠️ NÃO USAR — DEPRECIADO. Rodar isso causou pane geral (ninguém via
+-- nenhuma demanda, nem admin) em produção em 22/09/2026. Foi revertido com
+-- 2026_ROLLBACK_collaborator_visibility.sql (sem perda de dados). A parte
+-- de "tasks" foi reaplicada, isolada, em 2026_collaborator_visibility_v2_tasks_only.sql
+-- — use esse. As partes de comments/timeline_events ficaram de fora até
+-- a causa raiz ser identificada com mais cuidado.
+-- ============================================================================
+
+-- ============================================================================
 -- MIGRAÇÃO: quem é "pessoa envolvida" numa demanda passa a poder VER ela
 -- ============================================================================
 -- Hoje as políticas de segurança (RLS) de tasks/comments/timeline_events só
