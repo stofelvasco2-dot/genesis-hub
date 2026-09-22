@@ -107,17 +107,14 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
     toast.success("Comentário adicionado!");
   };
 
-  // Pessoas que dá pra @mencionar num comentário: quem já tem relação direta
-  // com a demanda (responsável, solicitante, pessoas envolvidas) — evita
-  // ambiguidade de nome repetido e erro de digitação.
-  const mentionCandidateIds = Array.from(new Set(
-    [task.assigneeId, task.requesterId, ...task.collaborators.map(c => c.userId)].filter(Boolean) as string[]
-  ));
-  const mentionCandidates = mentionCandidateIds
-    .map(id => users.find(u => u.id === id))
-    .filter((u): u is User => !!u && u.id !== currentUser?.id);
+  // Pessoas que dá pra @mencionar num comentário: qualquer colaborador ativo
+  // do sistema (não só quem já está ligado a essa demanda específica) —
+  // permite chamar alguém pra dar uma olhada mesmo sem adicioná-lo formalmente.
+  const mentionCandidates = users
+    .filter(u => u.active !== false && u.id !== currentUser?.id)
+    .sort((a, b) => a.name.localeCompare(b.name));
   const mentionResults = mentionQuery !== null
-    ? mentionCandidates.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 5)
+    ? mentionCandidates.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 6)
     : [];
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
