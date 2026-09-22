@@ -8,9 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Task, Category, Priority, Department, Status } from "@/lib/types";
+import { Task, Category, Priority, Department, Status, User } from "@/lib/types";
 import { X, CalendarIcon, Save, Edit2, ExternalLink, MessageSquare, Activity, Users, Plus, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useStore } from "@/lib/store";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +41,10 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
   const [commentText, setCommentText] = useState("");
   const [newCollaboratorId, setNewCollaboratorId] = useState("");
+  const [newCollaboratorCategory, setNewCollaboratorCategory] = useState("");
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -66,6 +70,12 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
       setCommentText("");
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setNewCollaboratorId("");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNewCollaboratorCategory("");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMentionedUserIds([]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMentionQuery(null);
     }
   }, [open, task]);
 
@@ -82,16 +92,54 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
     || currentUser?.id === task.assigneeId || currentUser?.id === task.requesterId;
 
   const handleAddCollaborator = async () => {
-    if (!newCollaboratorId || !currentUser) return;
-    await addTaskCollaborator(task.id, newCollaboratorId, currentUser.id);
+    if (!newCollaboratorId || !newCollaboratorCategory || !currentUser) return;
+    await addTaskCollaborator(task.id, newCollaboratorId, newCollaboratorCategory, currentUser.id);
     setNewCollaboratorId("");
+    setNewCollaboratorCategory("");
   };
 
   const handleAddComment = () => {
     if (!commentText.trim() || !currentUser) return;
-    addComment(task.id, currentUser.id, commentText.trim());
+    addComment(task.id, currentUser.id, commentText.trim(), mentionedUserIds);
     setCommentText("");
+    setMentionedUserIds([]);
+    setMentionQuery(null);
     toast.success("Comentário adicionado!");
+  };
+
+  // Pessoas que dá pra @mencionar num comentário: quem já tem relação direta
+  // com a demanda (responsável, solicitante, pessoas envolvidas) — evita
+  // ambiguidade de nome repetido e erro de digitação.
+  const mentionCandidateIds = Array.from(new Set(
+    [task.assigneeId, task.requesterId, ...task.collaborators.map(c => c.userId)].filter(Boolean) as string[]
+  ));
+  const mentionCandidates = mentionCandidateIds
+    .map(id => users.find(u => u.id === id))
+    .filter((u): u is User => !!u && u.id !== currentUser?.id);
+  const mentionResults = mentionQuery !== null
+    ? mentionCandidates.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase())).slice(0, 5)
+    : [];
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setCommentText(val);
+    const cursor = e.target.selectionStart ?? val.length;
+    const uptoCursor = val.slice(0, cursor);
+    const match = uptoCursor.match(/(?:^|\s)@([^\s@]*)$/);
+    setMentionQuery(match ? match[1] : null);
+  };
+
+  const handleSelectMention = (person: User) => {
+    const cursor = commentTextareaRef.current?.selectionStart ?? commentText.length;
+    const uptoCursor = commentText.slice(0, cursor);
+    const afterCursor = commentText.slice(cursor);
+    const match = uptoCursor.match(/(?:^|\s)@([^\s@]*)$/);
+    if (!match) return;
+    const prefix = uptoCursor.slice(0, uptoCursor.length - match[0].length);
+    const leadingSpace = match[0].startsWith(' ') ? ' ' : '';
+    setCommentText(`${prefix}${leadingSpace}@${person.name} ${afterCursor}`);
+    setMentionedUserIds(prev => (prev.includes(person.id) ? prev : [...prev, person.id]));
+    setMentionQuery(null);
   };
 
   const currentTask = isEditing ? { ...task, ...editedTask } : task;
@@ -363,8 +411,10 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                           <p className={cn("text-sm font-semibold truncate", collab.done ? "text-slate-400 dark:text-slate-500 line-through" : "text-slate-800 dark:text-slate-100")}>
                             {person?.name || "Usuário removido"}
                           </p>
-                          {person?.tipo_usuario && <p className="text-[11px] text-slate-400 dark:text-slate-500">{person.tipo_usuario}</p>}
                         </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                          {collab.category || "Sem categoria"}
+                        </span>
                         <span className={cn(
                           "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
                           collab.done ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
@@ -386,9 +436,13 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                   })}
 
                   {canManageCollaborators && (
-                    <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                       <Select value={newCollaboratorId} onValueChange={(val) => setNewCollaboratorId(val || "")}>
-                        <SelectTrigger className="h-9 text-xs flex-1"><SelectValue placeholder="Adicionar pessoa..." /></SelectTrigger>
+                        <SelectTrigger className="h-9 text-xs flex-1 min-w-[160px]">
+                          <SelectValue placeholder="Pessoa...">
+                            {newCollaboratorId ? users.find(u => u.id === newCollaboratorId)?.name : undefined}
+                          </SelectValue>
+                        </SelectTrigger>
                         <SelectContent>
                           {users
                             .filter(u => u.active !== false && !task.collaborators.some(c => c.userId === u.id))
@@ -399,7 +453,13 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                             ))}
                         </SelectContent>
                       </Select>
-                      <Button size="sm" onClick={handleAddCollaborator} disabled={!newCollaboratorId} className="bg-indigo-600 hover:bg-indigo-700 h-9 shrink-0">
+                      <Select value={newCollaboratorCategory} onValueChange={(val) => setNewCollaboratorCategory(val || "")}>
+                        <SelectTrigger className="h-9 text-xs w-[170px] shrink-0"><SelectValue placeholder="Categoria da parte..." /></SelectTrigger>
+                        <SelectContent>
+                          {categories.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" onClick={handleAddCollaborator} disabled={!newCollaboratorId || !newCollaboratorCategory} className="bg-indigo-600 hover:bg-indigo-700 h-9 shrink-0">
                         <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
                       </Button>
                     </div>
@@ -496,19 +556,41 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                     </div>
                     <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
                       <div className="relative">
-                        <Textarea 
+                        {mentionQuery !== null && mentionResults.length > 0 && (
+                          <div className="absolute left-0 right-14 bottom-full mb-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg overflow-hidden z-10">
+                            {mentionResults.map(person => (
+                              <button
+                                key={person.id}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); handleSelectMention(person); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-800"
+                              >
+                                <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-[9px] font-bold uppercase shrink-0">
+                                  {person.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                </div>
+                                <span className="font-semibold text-slate-700 dark:text-slate-200">{person.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <Textarea
+                          ref={commentTextareaRef}
                           placeholder="Escreva um comentário... (Use @ para mencionar)"
                           className="min-h-[70px] resize-none rounded-xl bg-white dark:bg-slate-900 pr-14 text-sm border-slate-200 dark:border-slate-800 shadow-sm focus-visible:ring-blue-500"
                           value={commentText}
-                          onChange={e => setCommentText(e.target.value)}
+                          onChange={handleCommentChange}
                           onKeyDown={e => {
+                            if (e.key === 'Escape' && mentionQuery !== null) {
+                              setMentionQuery(null);
+                              return;
+                            }
                             if(e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
                               handleAddComment();
                             }
                           }}
                         />
-                        <Button 
+                        <Button
                           size="icon"
                           className="absolute right-2 bottom-2 w-10 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all"
                           onClick={handleAddComment}

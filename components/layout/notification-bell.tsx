@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, UserPlus, ArrowRightCircle, Info, CheckCheck, MessageSquare, CalendarClock } from "lucide-react";
+import { Bell, UserPlus, ArrowRightCircle, Info, CheckCheck, MessageSquare, CalendarClock, AtSign } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useStore } from "@/lib/store";
 import { formatDistanceToNow } from "date-fns";
@@ -11,6 +11,7 @@ const typeIcon: Record<string, React.ReactNode> = {
   assigned: <UserPlus className="w-4 h-4 text-blue-600" />,
   stage_owner: <ArrowRightCircle className="w-4 h-4 text-violet-600" />,
   commented: <MessageSquare className="w-4 h-4 text-emerald-600" />,
+  mentioned: <AtSign className="w-4 h-4 text-pink-600" />,
   due_date_changed: <CalendarClock className="w-4 h-4 text-amber-600" />,
   other: <Info className="w-4 h-4 text-slate-500" />,
 };

@@ -75,7 +75,7 @@ export function KanbanCard({ task, index }: KanbanCardProps) {
                           return (
                             <div
                               key={c.id}
-                              title={`${person?.name || "?"} · ${c.done ? "pronto" : "pendente"}`}
+                              title={`${person?.name || "?"}${c.category ? ` · ${c.category}` : ""} · ${c.done ? "pronto" : "pendente"}`}
                               className={`w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-bold ${c.done ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400"}`}
                             >
                               {person?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || "?"}

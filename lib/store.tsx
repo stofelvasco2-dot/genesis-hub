@@ -20,7 +20,7 @@ type StoreContextType = {
   isLoaded: boolean;
   addTask: (task: Omit<Task, "id" | "createdAt" | "comments" | "timeline" | "updatedAt" | "collaborators">) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>, modifierId: string) => Promise<void>;
-  addComment: (taskId: string, userId: string, text: string) => Promise<void>;
+  addComment: (taskId: string, userId: string, text: string, mentionedUserIds?: string[]) => Promise<void>;
   moveTaskStatus: (taskId: string, newStatus: string, modifierId: string) => Promise<void>;
   refreshTasks: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -30,7 +30,7 @@ type StoreContextType = {
   markAllNotificationsRead: () => Promise<void>;
   addStageOwner: (status: string, userId: string) => Promise<void>;
   removeStageOwner: (id: string) => Promise<void>;
-  addTaskCollaborator: (taskId: string, userId: string, modifierId: string) => Promise<void>;
+  addTaskCollaborator: (taskId: string, userId: string, category: string | undefined, modifierId: string) => Promise<void>;
   removeTaskCollaborator: (id: string, taskId: string) => Promise<void>;
   setCollaboratorDone: (id: string, taskId: string, done: boolean, modifierId: string) => Promise<void>;
 };
@@ -150,7 +150,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ...e, userId: e.user_id, createdAt: e.created_at
         })).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
         collaborators: (t.task_collaborators || []).map((c: any) => ({
-          id: c.id, taskId: c.task_id, userId: c.user_id, done: c.done, doneAt: c.done_at
+          id: c.id, taskId: c.task_id, userId: c.user_id, category: c.category, done: c.done, doneAt: c.done_at
         })),
       }));
       setTasks(formattedTasks);
@@ -380,7 +380,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
           const c = payload.new as any;
           if (!c) return;
-          const mapped: TaskCollaborator = { id: c.id, taskId: c.task_id, userId: c.user_id, done: c.done, doneAt: c.done_at };
+          const mapped: TaskCollaborator = { id: c.id, taskId: c.task_id, userId: c.user_id, category: c.category, done: c.done, doneAt: c.done_at };
           setTasks(prev => prev.map(t => {
             if (t.id !== c.task_id) return t;
             const idx = t.collaborators.findIndex(existing => existing.id === c.id);
@@ -520,7 +520,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         timeline: (fullTask.timeline_events || []).map((e: any) => ({ ...e, userId: e.user_id, createdAt: e.created_at }))
           .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
         collaborators: (fullTask.task_collaborators || []).map((c: any) => ({
-          id: c.id, taskId: c.task_id, userId: c.user_id, done: c.done, doneAt: c.done_at
+          id: c.id, taskId: c.task_id, userId: c.user_id, category: c.category, done: c.done, doneAt: c.done_at
         })),
       };
       // Checa se essa tarefa já foi adicionada por outro caminho (o evento
@@ -738,9 +738,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     await updateTask(id, { status: newStatus }, modifierId);
   };
 
-  const addComment = async (taskId: string, userId: string, text: string) => {
+  const addComment = async (taskId: string, userId: string, text: string, mentionedUserIds: string[] = []) => {
     if (!supabase) return;
-    
+
     const { error } = await supabase.from('comments').insert([{
       task_id: taskId,
       user_id: userId,
@@ -760,13 +760,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }]);
 
     // Notifica responsável e quem pediu a demanda sobre o comentário novo
-    // (menos quem comentou, óbvio).
+    // (menos quem comentou, óbvio), e separadamente quem foi @mencionado no
+    // texto — essa pessoa recebe uma mensagem específica de menção em vez
+    // da genérica de "novo comentário", pra não duplicar aviso.
     const commentedTask = tasks.find(t => t.id === taskId);
     if (commentedTask) {
       const commenter = users.find(u => u.id === userId)?.name || "Alguém";
       const preview = text.length > 120 ? text.slice(0, 120) + "…" : text;
+
+      const mentioned = new Set(mentionedUserIds.filter(Boolean));
+      mentioned.delete(userId);
+
       const interested = new Set([commentedTask.assigneeId, commentedTask.requesterId].filter(Boolean) as string[]);
       interested.delete(userId);
+      for (const uid of mentioned) interested.delete(uid);
+
       for (const uid of interested) {
         await notifyUser(
           uid,
@@ -774,6 +782,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           `${commenter}: "${preview}"`,
           taskId,
           'commented'
+        );
+      }
+      for (const uid of mentioned) {
+        await notifyUser(
+          uid,
+          `${commenter} mencionou você em "${commentedTask.title}"`,
+          `"${preview}"`,
+          taskId,
+          'mentioned'
         );
       }
     }
@@ -785,7 +802,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Designer + Videomaker na mesma peça). Cada uma marca a própria parte
   // como pronta; o card mostra "2/3 partes prontas" mas ninguém é movido
   // de status sozinho — quem decide avançar continua sendo uma pessoa.
-  const addTaskCollaborator = async (taskId: string, userId: string, modifierId: string) => {
+  const addTaskCollaborator = async (taskId: string, userId: string, category: string | undefined, modifierId: string) => {
     if (!supabase) return;
     const task = tasks.find(t => t.id === taskId);
     if (task?.collaborators.some(c => c.userId === userId)) {
@@ -795,7 +812,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     const { data, error } = await supabase
       .from('task_collaborators')
-      .insert([{ task_id: taskId, user_id: userId }])
+      .insert([{ task_id: taskId, user_id: userId, category: category || null }])
       .select()
       .single();
 
@@ -804,14 +821,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const newCollab: TaskCollaborator = { id: data.id, taskId: data.task_id, userId: data.user_id, done: data.done, doneAt: data.done_at };
+    const newCollab: TaskCollaborator = { id: data.id, taskId: data.task_id, userId: data.user_id, category: data.category, done: data.done, doneAt: data.done_at };
     setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, collaborators: [...t.collaborators, newCollab] } : t)));
 
     if (task && userId !== modifierId) {
       await notifyUser(
         userId,
         `Você foi incluído em "${task.title}"`,
-        `Você agora também participa dessa demanda.`,
+        category ? `Você agora participa dessa demanda na parte de ${category}.` : `Você agora também participa dessa demanda.`,
         taskId,
         'assigned'
       );

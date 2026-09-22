@@ -38,6 +38,7 @@ export type TaskCollaborator = {
   id: string;
   taskId: string;
   userId: string;
+  category?: string;
   done: boolean;
   doneAt?: string;
 };
@@ -74,7 +75,7 @@ export type Notification = {
   taskId?: string;
   title: string;
   message?: string;
-  type: 'assigned' | 'stage_owner' | 'commented' | 'due_date_changed' | 'other';
+  type: 'assigned' | 'stage_owner' | 'commented' | 'due_date_changed' | 'mentioned' | 'other';
   read: boolean;
   createdAt: string;
 };
