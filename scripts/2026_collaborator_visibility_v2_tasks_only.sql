@@ -1,4 +1,11 @@
 -- ============================================================================
+-- ⚠️ NÃO USAR — TAMBÉM CAUSOU PANE (recursão infinita de RLS entre tasks e
+-- task_collaborators, que se checavam mutuamente). Revertido de novo em
+-- 22/09/2026. Use 2026_collaborator_visibility_v3_sem_recursao.sql, que
+-- resolve isso com uma função SECURITY DEFINER.
+-- ============================================================================
+
+-- ============================================================================
 -- MIGRAÇÃO v2 (isolada): só a tabela tasks, pra evitar repetir o apagão
 -- ============================================================================
 -- A v1 (2026_collaborator_visibility.sql) alterava 3 políticas de uma vez
