@@ -771,6 +771,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const mentioned = new Set(mentionedUserIds.filter(Boolean));
       mentioned.delete(userId);
 
+      // Quem é mencionado mas ainda não tem nenhum vínculo com a demanda
+      // (não é responsável, solicitante nem pessoa envolvida) é incluído
+      // automaticamente como pessoa envolvida — sem isso, a notificação
+      // levaria a pessoa a um link que ela não conseguiria abrir, porque a
+      // regra de segurança do banco só libera quem tem algum vínculo.
+      for (const uid of mentioned) {
+        const alreadyLinked = uid === commentedTask.assigneeId
+          || uid === commentedTask.requesterId
+          || commentedTask.collaborators.some(c => c.userId === uid);
+        if (!alreadyLinked) {
+          await supabase.from('task_collaborators').insert([{ task_id: taskId, user_id: uid, category: null }]);
+        }
+      }
+
       const interested = new Set([commentedTask.assigneeId, commentedTask.requesterId].filter(Boolean) as string[]);
       interested.delete(userId);
       for (const uid of mentioned) interested.delete(uid);

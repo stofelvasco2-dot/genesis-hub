@@ -21,6 +21,9 @@ export function KanbanCard({ task, index }: KanbanCardProps) {
 
   const dueDate = parseISO(task.dueDate);
   const isOverdue = isPast(dueDate) && !isToday(dueDate);
+  // Demanda sem responsável definido não anda sozinha (regra de negócio já
+  // existente); destaca isso visualmente pra não ficar esquecida parada.
+  const needsAssignee = !task.assigneeId && task.status !== "Aprovado";
 
   return (
     <>
@@ -34,7 +37,7 @@ export function KanbanCard({ task, index }: KanbanCardProps) {
             onClick={() => setIsModalOpen(true)}
             className={`group select-none relative ${snapshot.isDragging ? 'z-50' : ''}`}
           >
-            <div className={`bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 ${task.status === "Em Produção" ? "ring-2 ring-blue-500/10" : ""} ${task.status === "Aprovado" ? "opacity-75" : ""}`}>
+            <div className={`bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200 ${needsAssignee ? "border-red-300 dark:border-red-500/40 border-l-4 border-l-red-500" : "border-slate-200 dark:border-slate-800"} ${task.status === "Em Produção" ? "ring-2 ring-blue-500/10" : ""} ${task.status === "Aprovado" ? "opacity-75" : ""}`}>
               
               <div className="flex justify-between items-start mb-3 gap-2">
                 <div className="flex flex-wrap gap-1.5">
@@ -62,8 +65,11 @@ export function KanbanCard({ task, index }: KanbanCardProps) {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 border-dashed flex items-center justify-center" title="Sem responsável">
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500">?</span>
+                    <div className="flex items-center gap-1" title="Sem responsável definido">
+                      <div className="w-5 h-5 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-300 dark:border-red-500/40 border-dashed flex items-center justify-center shrink-0">
+                        <span className="text-[10px] text-red-500 dark:text-red-400">?</span>
+                      </div>
+                      <span className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide">Sem responsável</span>
                     </div>
                   )}
 

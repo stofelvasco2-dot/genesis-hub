@@ -38,10 +38,10 @@ export default function TasksPage() {
           <TableBody>
             {displayTasks.map(task => {
               const requester = users.find(u => u.id === task.requesterId)?.name;
-              const assignee = users.find(u => u.id === task.assigneeId)?.name || "Não atribuído";
-              
+              const needsAssignee = !task.assigneeId && task.status !== "Aprovado";
+
               return (
-                <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
+                <TableRow key={task.id} className={`cursor-pointer hover:bg-muted/50 ${needsAssignee ? "bg-red-50/50 dark:bg-red-500/5" : ""}`}>
                   <TableCell className="font-medium">{task.title}</TableCell>
                   <TableCell>{task.category}</TableCell>
                   <TableCell>{task.priority}</TableCell>
@@ -49,7 +49,13 @@ export default function TasksPage() {
                     <Badge variant="outline">{task.status}</Badge>
                   </TableCell>
                   <TableCell>{requester}</TableCell>
-                  <TableCell>{assignee}</TableCell>
+                  <TableCell>
+                    {needsAssignee ? (
+                      <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase">Sem responsável</span>
+                    ) : (
+                      users.find(u => u.id === task.assigneeId)?.name || "Não atribuído"
+                    )}
+                  </TableCell>
                   <TableCell>{format(parseISO(task.dueDate), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                 </TableRow>
               );
