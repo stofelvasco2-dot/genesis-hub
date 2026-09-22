@@ -54,7 +54,7 @@ export function KanbanCard({ task, index }: KanbanCardProps) {
               
               <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {assignee ? (
                     <div className="flex items-center gap-1.5" title={assignee.name}>
                       <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 font-bold text-[9px] flex items-center justify-center">
@@ -66,9 +66,33 @@ export function KanbanCard({ task, index }: KanbanCardProps) {
                       <span className="text-[10px] text-slate-400 dark:text-slate-500">?</span>
                     </div>
                   )}
-                  
-                  <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 ml-1">
-                  </div>
+
+                  {task.collaborators.length > 0 && (
+                    <>
+                      <div className="flex items-center -space-x-1.5">
+                        {task.collaborators.slice(0, 3).map((c) => {
+                          const person = users.find((u) => u.id === c.userId);
+                          return (
+                            <div
+                              key={c.id}
+                              title={`${person?.name || "?"} · ${c.done ? "pronto" : "pendente"}`}
+                              className={`w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-bold ${c.done ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400"}`}
+                            >
+                              {person?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || "?"}
+                            </div>
+                          );
+                        })}
+                        {task.collaborators.length > 3 && (
+                          <div className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[8px] font-bold text-slate-600 dark:text-slate-300">
+                            +{task.collaborators.length - 3}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-[9px] font-bold px-1 rounded ${task.collaborators.every(c => c.done) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"}`}>
+                        {task.collaborators.filter(c => c.done).length}/{task.collaborators.length}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${isOverdue ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400' : isToday(dueDate) ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>

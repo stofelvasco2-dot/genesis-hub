@@ -34,6 +34,14 @@ export type TimelineEvent = {
   createdAt: string;
 };
 
+export type TaskCollaborator = {
+  id: string;
+  taskId: string;
+  userId: string;
+  done: boolean;
+  doneAt?: string;
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -49,6 +57,7 @@ export type Task = {
   dueDate: string;
   comments: Comment[];
   timeline: TimelineEvent[];
+  collaborators: TaskCollaborator[];
   referenceLinks?: string[];
   notes?: string;
   updatedAt?: string;

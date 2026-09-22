@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Task, Category, Priority, Department, Status } from "@/lib/types";
-import { X, CalendarIcon, Save, Edit2, ExternalLink, MessageSquare, Activity } from "lucide-react";
+import { X, CalendarIcon, Save, Edit2, ExternalLink, MessageSquare, Activity, Users, Plus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -32,11 +32,15 @@ interface TaskDetailModalProps {
 
 
 export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalProps) {
-  const { updateTask, currentUser, users, addComment, statuses, categories, priorities, departments } = useStore();
-  
+  const {
+    updateTask, currentUser, users, addComment, statuses, categories, priorities, departments,
+    addTaskCollaborator, removeTaskCollaborator, setCollaboratorDone,
+  } = useStore();
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
   const [commentText, setCommentText] = useState("");
+  const [newCollaboratorId, setNewCollaboratorId] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -60,6 +64,8 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
       });
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCommentText("");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setNewCollaboratorId("");
     }
   }, [open, task]);
 
@@ -68,6 +74,17 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
     updateTask(task.id, editedTask, currentUser.id);
     toast.success("Solicitação atualizada com sucesso!");
     setIsEditing(false);
+  };
+
+  // Quem pode adicionar/remover pessoas envolvidas na demanda — mesma regra
+  // de quem já pode editar a task (admin/gestor, responsável ou solicitante).
+  const canManageCollaborators = currentUser?.role === "Admin" || currentUser?.role === "Gestor"
+    || currentUser?.id === task.assigneeId || currentUser?.id === task.requesterId;
+
+  const handleAddCollaborator = async () => {
+    if (!newCollaboratorId || !currentUser) return;
+    await addTaskCollaborator(task.id, newCollaboratorId, currentUser.id);
+    setNewCollaboratorId("");
   };
 
   const handleAddComment = () => {
@@ -299,6 +316,95 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                     {currentTask.description}
                   </div>
                 )}
+              </div>
+
+              {/* Pessoas Envolvidas: além do responsável principal, quem mais
+                  participa dessa demanda (Designer + Videomaker etc.), cada
+                  um marcando quando a própria parte está pronta. */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Pessoas Envolvidas
+                  </Label>
+                  {task.collaborators.length > 0 && (
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                      {task.collaborators.filter(c => c.done).length}/{task.collaborators.length} partes prontas
+                    </span>
+                  )}
+                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3">
+                  {task.collaborators.length === 0 && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500 italic">
+                      Só o responsável principal está nessa demanda. Adicione mais gente se ela precisar de outras funções (ex.: Designer + Videomaker).
+                    </p>
+                  )}
+                  {task.collaborators.map(collab => {
+                    const person = users.find(u => u.id === collab.userId);
+                    const canToggle = collab.userId === currentUser?.id || canManageCollaborators;
+                    return (
+                      <div key={collab.id} className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={!canToggle}
+                          onClick={() => currentUser && setCollaboratorDone(collab.id, task.id, !collab.done, currentUser.id)}
+                          title={canToggle ? (collab.done ? "Marcar como pendente" : "Marcar minha parte como pronta") : "Só essa pessoa (ou admin/gestor) pode marcar"}
+                          className={cn(
+                            "w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors",
+                            collab.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950",
+                            canToggle ? "cursor-pointer hover:border-emerald-400" : "cursor-not-allowed opacity-50"
+                          )}
+                        >
+                          {collab.done && <Check className="w-3.5 h-3.5 text-white" />}
+                        </button>
+                        <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold uppercase shrink-0">
+                          {person?.name ? person.name.split(' ').map(n => n[0]).join('').substring(0, 2) : "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-semibold truncate", collab.done ? "text-slate-400 dark:text-slate-500 line-through" : "text-slate-800 dark:text-slate-100")}>
+                            {person?.name || "Usuário removido"}
+                          </p>
+                          {person?.tipo_usuario && <p className="text-[11px] text-slate-400 dark:text-slate-500">{person.tipo_usuario}</p>}
+                        </div>
+                        <span className={cn(
+                          "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
+                          collab.done ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                        )}>
+                          {collab.done ? "Pronto" : "Pendente"}
+                        </span>
+                        {canManageCollaborators && (
+                          <button
+                            type="button"
+                            onClick={() => removeTaskCollaborator(collab.id, task.id)}
+                            className="text-slate-300 dark:text-slate-600 hover:text-red-500 shrink-0"
+                            title="Remover da demanda"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {canManageCollaborators && (
+                    <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <Select value={newCollaboratorId} onValueChange={(val) => setNewCollaboratorId(val || "")}>
+                        <SelectTrigger className="h-9 text-xs flex-1"><SelectValue placeholder="Adicionar pessoa..." /></SelectTrigger>
+                        <SelectContent>
+                          {users
+                            .filter(u => u.active !== false && !task.collaborators.some(c => c.userId === u.id))
+                            .map(u => (
+                              <SelectItem key={u.id} value={u.id} className="text-xs">
+                                {u.name}{u.tipo_usuario ? ` · ${u.tipo_usuario}` : ""}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" onClick={handleAddCollaborator} disabled={!newCollaboratorId} className="bg-indigo-600 hover:bg-indigo-700 h-9 shrink-0">
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

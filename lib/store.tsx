@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { Task, User, Category, Priority, Status, Comment, TimelineEvent, Notification, StageOwner } from "./types";
+import { Task, User, Category, Priority, Status, Comment, TimelineEvent, Notification, StageOwner, TaskCollaborator } from "./types";
 import { supabase } from "./supabase";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ type StoreContextType = {
   unreadCount: number;
   stageOwners: StageOwner[];
   isLoaded: boolean;
-  addTask: (task: Omit<Task, "id" | "createdAt" | "comments" | "timeline" | "updatedAt">) => Promise<void>;
+  addTask: (task: Omit<Task, "id" | "createdAt" | "comments" | "timeline" | "updatedAt" | "collaborators">) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>, modifierId: string) => Promise<void>;
   addComment: (taskId: string, userId: string, text: string) => Promise<void>;
   moveTaskStatus: (taskId: string, newStatus: string, modifierId: string) => Promise<void>;
@@ -30,6 +30,9 @@ type StoreContextType = {
   markAllNotificationsRead: () => Promise<void>;
   addStageOwner: (status: string, userId: string) => Promise<void>;
   removeStageOwner: (id: string) => Promise<void>;
+  addTaskCollaborator: (taskId: string, userId: string, modifierId: string) => Promise<void>;
+  removeTaskCollaborator: (id: string, taskId: string) => Promise<void>;
+  setCollaboratorDone: (id: string, taskId: string, done: boolean, modifierId: string) => Promise<void>;
 };
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -99,7 +102,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     
     const [usersRes, tasksRes, deptRes, catRes, prioRes, statRes, roleRes, notifRes, stageOwnerRes] = await Promise.all([
       supabase.from('users').select('*'),
-      supabase.from('tasks').select('*, comments(*), timeline_events(*)'),
+      supabase.from('tasks').select('*, comments(*), timeline_events(*), task_collaborators(*)'),
       supabase.from('departments').select('name'),
       supabase.from('categories').select('name'),
       supabase.from('priorities').select('name'),
@@ -145,7 +148,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         })),
         timeline: (t.timeline_events || []).map((e: any) => ({
           ...e, userId: e.user_id, createdAt: e.created_at
-        })).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        })).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+        collaborators: (t.task_collaborators || []).map((c: any) => ({
+          id: c.id, taskId: c.task_id, userId: c.user_id, done: c.done, doneAt: c.done_at
+        })),
       }));
       setTasks(formattedTasks);
     }
@@ -311,7 +317,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               // Card novo criado por outra pessoa: entra na lista (sem
               // comments/timeline ainda — completam quando o card for aberto).
               if (payload.eventType !== 'INSERT') return prev;
-              return [{ ...mapped, comments: [], timeline: [] } as Task, ...prev];
+              return [{ ...mapped, comments: [], timeline: [], collaborators: [] } as Task, ...prev];
             }
             // Card existente: atualiza só os campos, preservando
             // comments/timeline que já estavam carregados localmente.
@@ -354,6 +360,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 id: e.id, type: e.type, userId: e.user_id, description: e.description, createdAt: e.created_at,
               }],
             };
+          }));
+        }
+      )
+      // Colaboradores da demanda: adicionar/remover pessoa e marcar "parte
+      // pronta" aparece pros outros na hora, sem precisar dar F5.
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_collaborators' },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const old = payload.old as any;
+            if (!old?.id) return;
+            setTasks(prev => prev.map(t => (
+              t.id === old.task_id ? { ...t, collaborators: t.collaborators.filter(c => c.id !== old.id) } : t
+            )));
+            return;
+          }
+
+          const c = payload.new as any;
+          if (!c) return;
+          const mapped: TaskCollaborator = { id: c.id, taskId: c.task_id, userId: c.user_id, done: c.done, doneAt: c.done_at };
+          setTasks(prev => prev.map(t => {
+            if (t.id !== c.task_id) return t;
+            const idx = t.collaborators.findIndex(existing => existing.id === c.id);
+            if (idx === -1) return { ...t, collaborators: [...t.collaborators, mapped] };
+            return { ...t, collaborators: t.collaborators.map((existing, i) => (i === idx ? mapped : existing)) };
           }));
         }
       )
@@ -465,7 +497,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // Evita recarregar as 7 tabelas do banco só pra criar 1 tarefa.
     const { data: fullTask } = await supabase
       .from('tasks')
-      .select('*, comments(*), timeline_events(*)')
+      .select('*, comments(*), timeline_events(*), task_collaborators(*)')
       .eq('id', data.id)
       .single();
 
@@ -487,6 +519,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         comments: (fullTask.comments || []).map((c: any) => ({ ...c, userId: c.user_id, createdAt: c.created_at })),
         timeline: (fullTask.timeline_events || []).map((e: any) => ({ ...e, userId: e.user_id, createdAt: e.created_at }))
           .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+        collaborators: (fullTask.task_collaborators || []).map((c: any) => ({
+          id: c.id, taskId: c.task_id, userId: c.user_id, done: c.done, doneAt: c.done_at
+        })),
       };
       // Checa se essa tarefa já foi adicionada por outro caminho (o evento
       // de tempo real pode chegar e inserir uma versão "resumida" dela
@@ -746,6 +781,95 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     await refreshTasks();
   };
   
+  // Pessoas envolvidas numa demanda além do responsável principal (ex.:
+  // Designer + Videomaker na mesma peça). Cada uma marca a própria parte
+  // como pronta; o card mostra "2/3 partes prontas" mas ninguém é movido
+  // de status sozinho — quem decide avançar continua sendo uma pessoa.
+  const addTaskCollaborator = async (taskId: string, userId: string, modifierId: string) => {
+    if (!supabase) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (task?.collaborators.some(c => c.userId === userId)) {
+      toast.error("Essa pessoa já está nessa demanda.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('task_collaborators')
+      .insert([{ task_id: taskId, user_id: userId }])
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Erro ao adicionar pessoa: ' + error.message);
+      return;
+    }
+
+    const newCollab: TaskCollaborator = { id: data.id, taskId: data.task_id, userId: data.user_id, done: data.done, doneAt: data.done_at };
+    setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, collaborators: [...t.collaborators, newCollab] } : t)));
+
+    if (task && userId !== modifierId) {
+      await notifyUser(
+        userId,
+        `Você foi incluído em "${task.title}"`,
+        `Você agora também participa dessa demanda.`,
+        taskId,
+        'assigned'
+      );
+    }
+  };
+
+  const removeTaskCollaborator = async (id: string, taskId: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('task_collaborators').delete().eq('id', id);
+    if (error) {
+      toast.error('Erro ao remover pessoa: ' + error.message);
+      return;
+    }
+    setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, collaborators: t.collaborators.filter(c => c.id !== id) } : t)));
+  };
+
+  const setCollaboratorDone = async (id: string, taskId: string, done: boolean, modifierId: string) => {
+    if (!supabase) return;
+    const now = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('task_collaborators')
+      .update({ done, done_at: done ? now : null })
+      .eq('id', id);
+
+    if (error) {
+      toast.error('Erro ao atualizar: ' + error.message);
+      return;
+    }
+
+    setTasks(prev => prev.map(t => (
+      t.id === taskId
+        ? { ...t, collaborators: t.collaborators.map(c => (c.id === id ? { ...c, done, doneAt: done ? now : undefined } : c)) }
+        : t
+    )));
+
+    // Só avisa o responsável e o solicitante que uma parte ficou pronta —
+    // ninguém move o card sozinho, quem decide continua sendo uma pessoa.
+    if (done) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        const doneCount = task.collaborators.filter(c => c.done || c.id === id).length;
+        const total = task.collaborators.length;
+        const interested = new Set([task.assigneeId, task.requesterId].filter(Boolean) as string[]);
+        interested.delete(modifierId);
+        for (const uid of interested) {
+          await notifyUser(
+            uid,
+            `Parte concluída em "${task.title}"`,
+            `${doneCount}/${total} partes já concluídas.`,
+            taskId,
+            'other'
+          );
+        }
+      }
+    }
+  };
+
   const signOut = async () => {
     if (supabase) await supabase.auth.signOut();
   };
@@ -782,7 +906,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       notifications, unreadCount, stageOwners,
       isLoaded, addTask, updateTask, addComment, moveTaskStatus, refreshTasks, signOut,
       addOption, removeOption, markNotificationRead, markAllNotificationsRead,
-      addStageOwner, removeStageOwner
+      addStageOwner, removeStageOwner,
+      addTaskCollaborator, removeTaskCollaborator, setCollaboratorDone
     }}>
       {children}
     </StoreContext.Provider>
