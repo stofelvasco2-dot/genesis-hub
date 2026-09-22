@@ -34,7 +34,7 @@ interface TaskDetailModalProps {
 export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalProps) {
   const {
     updateTask, currentUser, users, addComment, statuses, categories, priorities, departments,
-    addTaskCollaborator, removeTaskCollaborator, setCollaboratorDone,
+    addTaskCollaborator, removeTaskCollaborator, setCollaboratorDone, setCollaboratorCategoryByUser,
   } = useStore();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -44,6 +44,9 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
   const [newCollaboratorCategory, setNewCollaboratorCategory] = useState("");
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const [pendingMentions, setPendingMentions] = useState<User[]>([]);
+  const [pendingCategories, setPendingCategories] = useState<Record<string, string>>({});
+  const [savingPendingCategories, setSavingPendingCategories] = useState(false);
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -76,6 +79,10 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
       setMentionedUserIds([]);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMentionQuery(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingMentions([]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingCategories({});
     }
   }, [open, task]);
 
@@ -98,13 +105,42 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
     setNewCollaboratorCategory("");
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!commentText.trim() || !currentUser) return;
-    addComment(task.id, currentUser.id, commentText.trim(), mentionedUserIds);
+
+    // Quem foi mencionado mas ainda não tinha nenhum vínculo com a demanda
+    // (não é responsável, solicitante nem já estava em Pessoas Envolvidas)
+    // acabou de ser incluído automaticamente, sem categoria — junta pra
+    // perguntar a categoria logo depois de enviar, em vez de deixar
+    // "Sem categoria" parado até alguém lembrar de corrigir.
+    const newlyMentioned = mentionedUserIds
+      .filter(id => id !== currentUser.id)
+      .filter(id => id !== task.assigneeId && id !== task.requesterId && !task.collaborators.some(c => c.userId === id))
+      .map(id => users.find(u => u.id === id))
+      .filter((u): u is User => !!u);
+
+    await addComment(task.id, currentUser.id, commentText.trim(), mentionedUserIds);
     setCommentText("");
     setMentionedUserIds([]);
     setMentionQuery(null);
     toast.success("Comentário adicionado!");
+
+    if (newlyMentioned.length > 0) {
+      setPendingMentions(newlyMentioned);
+      setPendingCategories({});
+    }
+  };
+
+  const handleSavePendingCategories = async () => {
+    if (!currentUser) return;
+    setSavingPendingCategories(true);
+    for (const person of pendingMentions) {
+      const category = pendingCategories[person.id];
+      if (category) await setCollaboratorCategoryByUser(task.id, person.id, category);
+    }
+    setSavingPendingCategories(false);
+    setPendingMentions([]);
+    setPendingCategories({});
   };
 
   // Pessoas que dá pra @mencionar num comentário: qualquer colaborador ativo
@@ -158,6 +194,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
   const currentAssignee = users.find(u => u.id === currentTask.assigneeId);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[1200px] w-[95vw] max-h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-y-auto sm:overflow-hidden bg-slate-50 dark:bg-slate-950 border-none shadow-2xl font-sans sm:rounded-2xl [&>button]:hidden">
         
@@ -635,5 +672,46 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
         
       </DialogContent>
     </Dialog>
+
+    {/* Popup: aparece depois de enviar um comentário que @mencionou alguém
+        sem vínculo prévio com a demanda — pede a categoria da parte dela,
+        já que ela acabou de ser incluída automaticamente sem categoria. */}
+    <Dialog open={pendingMentions.length > 0} onOpenChange={(o) => { if (!o) { setPendingMentions([]); setPendingCategories({}); } }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Qual a parte de quem foi mencionado?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-slate-500 dark:text-slate-400 -mt-2">
+          {pendingMentions.length === 1
+            ? `${pendingMentions[0].name} foi incluído(a) automaticamente nessa demanda, já que você mencionou ela. Qual a categoria da parte dela?`
+            : "Essas pessoas foram incluídas automaticamente nessa demanda, já que você mencionou elas. Qual a categoria da parte de cada uma?"}
+        </p>
+        <div className="space-y-3 pt-2">
+          {pendingMentions.map(person => (
+            <div key={person.id} className="flex items-center gap-2">
+              <span className="text-sm font-semibold flex-1 truncate">{person.name}</span>
+              <Select
+                value={pendingCategories[person.id] || ""}
+                onValueChange={(val) => setPendingCategories(prev => ({ ...prev, [person.id]: val || "" }))}
+              >
+                <SelectTrigger className="h-9 text-xs w-[170px] shrink-0"><SelectValue placeholder="Categoria..." /></SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => { setPendingMentions([]); setPendingCategories({}); }}>
+            Definir depois
+          </Button>
+          <Button onClick={handleSavePendingCategories} disabled={savingPendingCategories} className="bg-indigo-600 hover:bg-indigo-700">
+            {savingPendingCategories ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

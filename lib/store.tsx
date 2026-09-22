@@ -33,6 +33,7 @@ type StoreContextType = {
   addTaskCollaborator: (taskId: string, userId: string, category: string | undefined, modifierId: string) => Promise<void>;
   removeTaskCollaborator: (id: string, taskId: string) => Promise<void>;
   setCollaboratorDone: (id: string, taskId: string, done: boolean, modifierId: string) => Promise<void>;
+  setCollaboratorCategoryByUser: (taskId: string, userId: string, category: string) => Promise<void>;
 };
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -849,6 +850,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Usado pelo popup que abre depois de @mencionar alguém novo num
+  // comentário: define a categoria da parte de quem acabou de ser incluído
+  // automaticamente (sem categoria). Identifica pelo par task/pessoa em vez
+  // do id da linha, porque essa linha acabou de ser criada em segundo plano
+  // pelo addComment — não temos o id dela disponível ainda nesse momento.
+  const setCollaboratorCategoryByUser = async (taskId: string, userId: string, category: string) => {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('task_collaborators')
+      .update({ category })
+      .eq('task_id', taskId)
+      .eq('user_id', userId);
+
+    if (error) {
+      toast.error('Erro ao definir categoria: ' + error.message);
+      return;
+    }
+
+    setTasks(prev => prev.map(t => (
+      t.id === taskId
+        ? { ...t, collaborators: t.collaborators.map(c => (c.userId === userId ? { ...c, category } : c)) }
+        : t
+    )));
+  };
+
   const removeTaskCollaborator = async (id: string, taskId: string) => {
     if (!supabase) return;
     const { error } = await supabase.from('task_collaborators').delete().eq('id', id);
@@ -938,7 +964,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       isLoaded, addTask, updateTask, addComment, moveTaskStatus, refreshTasks, signOut,
       addOption, removeOption, markNotificationRead, markAllNotificationsRead,
       addStageOwner, removeStageOwner,
-      addTaskCollaborator, removeTaskCollaborator, setCollaboratorDone
+      addTaskCollaborator, removeTaskCollaborator, setCollaboratorDone, setCollaboratorCategoryByUser
     }}>
       {children}
     </StoreContext.Provider>
