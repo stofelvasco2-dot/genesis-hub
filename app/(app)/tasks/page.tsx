@@ -11,9 +11,9 @@ export default function TasksPage() {
 
   const isGestorOrAdmin = currentUser?.role === "Admin" || currentUser?.role === "Gestor";
   
-  const displayTasks = isGestorOrAdmin 
-    ? tasks 
-    : tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id);
+  const displayTasks = isGestorOrAdmin
+    ? tasks
+    : tasks.filter(t => t.assigneeId === currentUser?.id || t.requesterId === currentUser?.id || t.collaborators.some(c => c.userId === currentUser?.id));
 
   return (
     <div className="space-y-6 p-6">

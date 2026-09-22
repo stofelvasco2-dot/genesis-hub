@@ -26,10 +26,10 @@ export default function CollaboratorDashboard() {
   const { tasks, currentUser } = useStore();
   const router = useRouter();
 
-  // Só as tarefas onde a pessoa é responsável (a fila de trabalho dela) —
-  // atualiza sozinho em tempo real, sem precisar de F5.
+  // Tarefas onde a pessoa é responsável principal OU pessoa envolvida (a
+  // fila de trabalho dela) — atualiza sozinho em tempo real, sem F5.
   const myTasks = useMemo(
-    () => tasks.filter((t) => t.assigneeId === currentUser?.id),
+    () => tasks.filter((t) => t.assigneeId === currentUser?.id || t.collaborators.some(c => c.userId === currentUser?.id)),
     [tasks, currentUser?.id]
   );
   const myActiveTasks = useMemo(() => myTasks.filter((t) => t.status !== "Aprovado"), [myTasks]);
