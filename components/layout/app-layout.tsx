@@ -2,6 +2,7 @@
 
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
+import { PushOnboardingBanner } from "./push-onboarding-banner";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/lib/sidebar-context";
 
@@ -32,6 +33,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           isSidebarOpen={isSidebarOpen} 
           isMobile={isMobile}
         />
+        <PushOnboardingBanner />
         <main className="flex-1 flex flex-col overflow-auto">
           {children}
         </main>
