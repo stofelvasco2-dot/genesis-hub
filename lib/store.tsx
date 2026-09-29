@@ -402,8 +402,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Função central de notificação: grava no sino (tabela `notifications`) e
-  // dispara o e-mail em segundo plano. Usada tanto pra atribuição direta
-  // quanto pra "dono de etapa". Nunca notifica a própria pessoa que fez a ação.
+  // dispara e-mail + push em segundo plano. Usada tanto pra atribuição
+  // direta quanto pra "dono de etapa". Nunca notifica a própria pessoa que
+  // fez a ação.
   const notifyUser = async (userId: string, title: string, message: string, taskId?: string, type: Notification['type'] = 'other') => {
     if (!supabase || !userId) return;
 
@@ -432,6 +433,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         // Falha de e-mail nunca deve travar o fluxo do usuário no app.
       });
     }
+
+    // Push notification (aparece mesmo com o app fechado) — se a pessoa
+    // nunca ativou em nenhum navegador, o endpoint só retorna sent: 0, sem
+    // erro nenhum. Também nunca deve travar o fluxo do app.
+    fetch('/api/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, title, message, taskId }),
+    }).catch(() => {});
   };
 
   const markNotificationRead = async (id: string) => {

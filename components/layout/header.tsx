@@ -3,6 +3,7 @@
 import { PlusCircle, Menu, PanelLeft } from "lucide-react";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { PushNotificationButton } from "@/components/layout/push-notification-button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function Header({ toggleSidebar, isSidebarOpen, isMobile }: { toggleSideb
       
       <div className="flex items-center gap-2 sm:gap-4 ml-4 shrink-0">
         <ThemeToggle />
+        <PushNotificationButton />
         <NotificationBell />
         <Button 
           onClick={() => setIsModalOpen(true)} 
